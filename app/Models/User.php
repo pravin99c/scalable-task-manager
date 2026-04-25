@@ -35,15 +35,31 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Get the roles for the user.
      */
-    protected function casts(): array
+    public function roles()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->belongsToMany(Role::class);
+    }
+
+    /**
+     * Check if user has a specific permission.
+     */
+    public function hasPermission($permissionSlug)
+    {
+        foreach ($this->roles as $role) {
+            if ($role->permissions->where('slug', $permissionSlug)->count() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if user has a specific role.
+     */
+    public function hasRole($roleSlug)
+    {
+        return $this->roles->where('slug', $roleSlug)->count() > 0;
     }
 }

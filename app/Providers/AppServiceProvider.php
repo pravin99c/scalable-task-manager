@@ -24,8 +24,10 @@ class AppServiceProvider extends ServiceProvider
     {
         \App\Models\Task::observe(\App\Observers\TaskObserver::class);
 
-        RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        \Illuminate\Support\Facades\RateLimiter::for('api', function (Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
+
+        \Illuminate\Pagination\Paginator::useBootstrapFive();
     }
 }
