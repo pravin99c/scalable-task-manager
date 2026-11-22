@@ -213,7 +213,7 @@ export function App() {
                 <div className="sidebar-search"><Search size={15}/><input aria-label="Search projects" placeholder="Search projects…" value={projectSearch} onChange={e=>setProjectSearch(e.target.value)}/></div>
                 <div className="project-links">
                     {loadingProjects && !projects.length && <span className="muted-small">Loading projects…</span>}
-                    {projects.map((p,i)=><button title={p.name} key={p.id} className={'project-nav-item '+(projectId===p.id?'active':'')} onClick={()=>{setProjectId(p.id);setView('board');setMobile(false)}}><span className={'project-color project-color-'+i%5}/><span className="truncate">{p.name}</span>{projectId===p.id&&<span className="tiny-dot"/>}</button>)}
+                    {projects.map((p,i)=><button title={p.name} key={p.id} className={'project-nav-item '+(projectId===p.id?'active':'')} onClick={()=>{setProjectId(p.id);setView('board');setMobile(false)}}><span className={'project-color project-color-'+(i%5)}/><span className="truncate">{p.name}</span>{projectId===p.id&&<span className="tiny-dot"/>}</button>)}
                     {!loadingProjects && !projects.length && <span className="muted-small">No projects found.</span>}
                 </div>
                 {(projectMeta?.last_page??1)>1&&<div className="project-pager"><button disabled={projectPage===1} aria-label="Previous project page" onClick={()=>setProjectPage(p=>p-1)}><ChevronLeft size={16}/></button><span>{projectPage} / {projectMeta?.last_page}</span><button disabled={projectPage>=(projectMeta?.last_page??1)} aria-label="Next project page" onClick={()=>setProjectPage(p=>p+1)}><ChevronRight size={16}/></button></div>}

@@ -62,6 +62,12 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     if (!payload || typeof payload !== 'object') {
         throw new ApiError(response.status, 'Unexpected server response.');
     }
+    // Laravel regenerates its CSRF token after login, registration and
+    // logout. Replace the old token before the next protected request.
+    if (path.startsWith('/app/api/') && 'csrf_token' in payload) {
+        const token = (payload as { csrf_token?: unknown }).csrf_token;
+        if (typeof token === 'string') csrfToken = token;
+    }
     return payload as T;
 }
 
