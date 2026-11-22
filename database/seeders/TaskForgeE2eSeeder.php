@@ -21,8 +21,13 @@ class TaskForgeE2eSeeder extends Seeder
 {
     public function run(): void
     {
+        // A forgotten environment flag must never allow overwriting a
+        // genuine application database. Only the dedicated SQLite file is
+        // acceptable, in addition to the double opt-in.
         if (! app()->environment('testing')
-            || env('TASKFORGE_ALLOW_E2E_SEED') !== '1') {
+            || env('TASKFORGE_ALLOW_E2E_SEED') !== '1'
+            || config('database.default') !== 'sqlite'
+            || basename((string) config('database.connections.sqlite.database')) !== 'taskforge_e2e.sqlite') {
             throw new RuntimeException('E2E data seeding is permitted only in an explicitly opted-in testing environment.');
         }
 

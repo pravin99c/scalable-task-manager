@@ -21,3 +21,10 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Isolated Playwright browser and Laravel E2E artifacts
+/database/taskforge_e2e.sqlite
+/database/taskforge_e2e.sqlite-*
+/playwright-report/
+/test-results/
+/playwright/.cache/

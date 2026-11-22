@@ -140,6 +140,28 @@ test('unverified user can request verification without sending real email', asyn
     await expect(page.getByRole('status')).toContainText('Verification message queued.');
 });
 
+
+test('email change revokes the current authenticated browser session', async ({ page }) => {
+    await page.goto('/app');
+    await page.getByRole('button', { name: 'Create an account' }).click();
+    await page.getByLabel('Full name').fill('E2E Email Change');
+    await page.getByLabel('Email address').fill('e2e-changed-start@example.test');
+    await page.getByLabel('Password', { exact: true }).fill(password);
+    await page.getByLabel('Confirm password').fill(password);
+    await page.getByRole('button', { name: 'Create account' }).click();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Account & security' }).click();
+    await page.getByLabel('New email').fill('e2e-changed-end@example.test');
+    await page.getByLabel('Current password').fill(password);
+    page.once('dialog', dialog => void dialog.accept());
+    await page.getByRole('button', { name: 'Update email' }).click();
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
+
+    const response = await page.request.get('/app/api/session');
+    expect((await response.json()).data).toBeNull();
+});
+
 test('mobile navigation and Kanban scrolling remain usable on narrow viewports', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await signIn(page, owner);
