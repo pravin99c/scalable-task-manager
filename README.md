@@ -39,7 +39,7 @@ php artisan migrate
 php artisan test
 ```
 
-For an environment that needs Docker, inspect the existing Compose files and follow the [security validation guide](docs/SECURITY_VALIDATION.md) before exposing any services. Avoid running destructive migration commands against real data.
+For a local Docker setup, follow the [TaskForge local development guide](docs/LOCAL_DEVELOPMENT.md) for the canonical Compose file, required non-default passwords, and repeatable commands. See also the [security validation guide](docs/SECURITY_VALIDATION.md). Avoid running destructive migration commands against real data.
 
 ## API overview
 
