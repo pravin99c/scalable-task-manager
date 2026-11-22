@@ -54,7 +54,7 @@ class DurableMailIntegrationTest extends TestCase
 
         $job = Queue::connection('database')->pop('mail');
         $this->assertNotNull($job);
-        $this->assertStringContainsString(DeliverTaskForgeMail::class, $job->payload());
+        $this->assertSame(DeliverTaskForgeMail::class, $job->payload()['displayName']);
 
         $job->fire();
         $job->delete();
