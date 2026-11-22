@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#0b1020">
     <meta name="description" content="TaskForge — your projects and work, together.">
     <title>TaskForge — Workspace</title>
+    @viteReactRefresh
     @vite('resources/js/taskforge/main.tsx')
 </head>
 <body>

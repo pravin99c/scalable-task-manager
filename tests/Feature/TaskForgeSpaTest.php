@@ -12,6 +12,12 @@ class TaskForgeSpaTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
+
     public function test_spa_route_loads_without_overwriting_admin_routes(): void
     {
         $this->get('/app')->assertOk()->assertSee('taskforge-root');
