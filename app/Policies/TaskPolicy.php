@@ -19,20 +19,16 @@ class TaskPolicy
 
     public function view(User $user, Task $task): bool
     {
-        // There is no project-membership model yet. Only the project owner
-        // may access a task until an explicit membership policy is introduced.
-        return $task->project()
-            ->where('created_by', $user->getKey())
-            ->exists();
+        return $user->can('view', $task->project);
     }
 
     public function update(User $user, Task $task): bool
     {
-        return $this->view($user, $task);
+        return $user->can('editTasks', $task->project);
     }
 
     public function delete(User $user, Task $task): bool
     {
-        return $this->view($user, $task);
+        return $user->can('delete', $task->project);
     }
 }

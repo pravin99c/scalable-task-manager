@@ -8,9 +8,6 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('project.{projectId}', function ($user, $projectId) {
-    // No project-membership system exists yet. Authorize only the owner.
-    return Project::query()
-        ->whereKey($projectId)
-        ->where('created_by', $user->getKey())
-        ->exists();
+    $project = Project::find($projectId);
+    return $project !== null && $user->can('view', $project);
 });

@@ -19,16 +19,26 @@ class ProjectPolicy
 
     public function view(User $user, Project $project): bool
     {
-        return (int) $project->created_by === (int) $user->getKey();
+        return $project->isOwner($user) || $project->hasMember($user);
     }
 
     public function update(User $user, Project $project): bool
     {
-        return $this->view($user, $project);
+        return $project->isOwner($user);
     }
 
     public function delete(User $user, Project $project): bool
     {
-        return $this->view($user, $project);
+        return $project->isOwner($user);
+    }
+
+    public function manageMembers(User $user, Project $project): bool
+    {
+        return $project->isOwner($user);
+    }
+
+    public function editTasks(User $user, Project $project): bool
+    {
+        return $project->isOwner($user) || $project->hasMember($user, 'editor');
     }
 }

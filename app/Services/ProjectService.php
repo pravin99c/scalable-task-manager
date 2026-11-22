@@ -15,11 +15,7 @@ class ProjectService extends BaseService
 
     public function getAllProjects(User $user): Collection
     {
-        // Never use a globally shared "projects.all" cache for private data.
-        return Project::query()
-            ->where('created_by', $user->getKey())
-            ->orderBy('id')
-            ->get();
+        return Project::query()->accessibleTo($user)->orderBy('id')->get();
     }
 
     public function createProject(array $data)
