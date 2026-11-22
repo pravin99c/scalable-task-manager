@@ -75,6 +75,10 @@ jobs:
       - name: PHP syntax checks
         run: |
           find app database routes tests bootstrap -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Synthetic Python release and benchmark safety tests
+        run: python3 -m unittest discover -s tests/ci -p 'test_*.py' -v
+      - name: Release artifact report (non-blocking during migration)
+        run: python3 scripts/release_quality_gate.py
       - name: Prepare application
         run: |
           cp .env.example .env
