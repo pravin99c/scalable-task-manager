@@ -27,7 +27,7 @@ Artisan::command('invitations:prune', function () {
     $challenges = \App\Models\EmailVerificationChallenge::query()
         ->where('expires_at', '<', $before)->delete();
 
-    IlluminateSupportFacadesCache::put('taskforge:prune_last_run', now()->toIso8601String(), now()->addDays(2));
+    \Illuminate\Support\Facades\Cache::put('taskforge:prune_last_run', now()->toIso8601String(), now()->addDays(2));
     $this->info("Marked {$expired} expired invitations; pruned {$deleted} invitations and {$challenges} email challenges.");
 })->purpose('Expire invitations and prune old token metadata');
 
