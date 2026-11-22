@@ -167,11 +167,23 @@ class DurableMailIntegrationTest extends TestCase
         $queued->fire();
         $queued->delete();
 
-        $mail = Mail::assertSent(ProjectInvitationMail::class, 1);
-        // Verify the token is neither leaked by API nor usable by another account.
-        $this->assertDatabaseMissing('project_user', ['project_id' => $project->id, 'user_id' => $imposter->id]);
+        $token = null;
+        Mail::assertSent(ProjectInvitationMail::class, function (ProjectInvitationMail $message) use ($recipient, &$token) {
+            if (! $message->hasTo($recipient->email)) {
+                return false;
+            }
+            $token = $message->token;
+            return true;
+        });
+
+        // Exercise a VALID token under the wrong identity, not just gibberish.
+        $this->assertNotNull($token);
         $this->as($imposter)->postJson('/api/v2/invitations/accept', [
-            'token' => str_repeat('x', 80),
-        ])->assertUnprocessable();
+            'token' => $token,
+        ])->assertUnprocessable()->assertJsonValidationErrors('token');
+        $this->assertDatabaseMissing('project_user', ['project_id' => $project->id, 'user_id' => $imposter->id]);
+        $this->as($recipient)->postJson('/api/v2/invitations/accept', [
+            'token' => $token,
+        ])->assertOk()->assertJsonPath('data.role', 'editor');
     }
 }
