@@ -83,6 +83,31 @@ class TaskForgeSpaTest extends TestCase
         $this->assertNull($user->fresh()->email_verified_at);
     }
 
+    public function test_an_api_bearer_token_never_counts_as_a_browser_session(): void
+    {
+        $apiUser = User::factory()->create();
+        \Laravel\Sanctum\Sanctum::actingAs($apiUser);
+
+        $this->getJson('/app/api/session')->assertOk()
+            ->assertJsonPath('data', null)
+            ->assertJsonStructure(['csrf_token']);
+    }
+
+    public function test_a_session_with_an_outdated_security_version_is_signed_out(): void
+    {
+        $user = User::factory()->create(['email' => 'epoch-check@example.test']);
+        $this->postJson('/app/api/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertOk();
+
+        // The previous login's cookie can still exist on file/Redis
+        // session drivers; the per-user version is checked independently.
+        $this->withSession(['taskforge_session_version' => -1]);
+        $this->getJson('/app/api/session')->assertOk()
+            ->assertJsonPath('data', null);
+    }
+
     public function test_failed_login_does_not_authenticate_a_user(): void
     {
         User::factory()->create(['email' => 'login@example.test']);

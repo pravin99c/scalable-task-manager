@@ -1,17 +1,21 @@
 name: Laravel security validation
 
+# Avoid duplicate CI runs for every feature-branch push. A pull request
+# runs the full suite; merges to long-lived branches run it again.
 on:
   push:
     branches:
       - main
       - development
-      - 'fix/**'
-      - 'feat/**'
-      - 'chore/**'
   pull_request:
     branches:
       - development
       - main
+
+# New commits on the same PR cancel older still-running builds.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
