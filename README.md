@@ -39,13 +39,13 @@ php artisan migrate
 php artisan test
 ```
 
-For an environment that needs Docker, inspect the existing Compose files and follow the [security validation guide](docs/SECURITY_VALIDATION.md) before exposing any services. Avoid running destructive migration commands against real data.
+For a local Docker setup, follow the [TaskForge local development guide](docs/LOCAL_DEVELOPMENT.md) for the canonical Compose file, required non-default passwords, and repeatable commands. See also the [security validation guide](docs/SECURITY_VALIDATION.md). Avoid running destructive migration commands against real data.
 
 ## API overview
 
 Authenticated endpoints include `/api/v1/projects`, `/api/v1/tasks`, `/api/v1/tasks/{task}/comments`, and `/api/v1/projects/{project}/members`. Owners may grant an existing user **editor** or **viewer** membership; every action is checked server-side.
 
-See [API_USAGE.md](API_USAGE.md) for current route examples, [docs/ROADMAP.md](docs/ROADMAP.md) for future work, and [repository governance](docs/REPOSITORY_GOVERNANCE.md) for branch and pull-request rules.
+See [API_USAGE.md](API_USAGE.md) for current route examples, [docs/ROADMAP.md](docs/ROADMAP.md) for future work, and [repository governance](docs/REPOSITORY_GOVERNANCE.md) for the branch and review policy.
 
 ## Engineering and quality
 
