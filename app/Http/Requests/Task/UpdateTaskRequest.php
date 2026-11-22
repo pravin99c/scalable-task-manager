@@ -30,8 +30,7 @@ class UpdateTaskRequest extends FormRequest
                     }
 
                     $project = $this->route('task')->project;
-                    if ((int) $project->created_by !== (int) $value
-                        && ! $project->members()->whereKey($value)->wherePivot('role', 'editor')->exists()) {
+                    if (! $project->canAssignTo((int) $value)) {
                         $fail('Assignee must be the project owner or an editor.');
                     }
                 },
