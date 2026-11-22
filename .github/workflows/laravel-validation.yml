@@ -72,6 +72,45 @@ jobs:
         run: npm test
       - name: Frontend production build
         run: npm run build
+      # npm install generates a real registry-resolved lockfile while the
+      # checked-in lockfile is absent. Surface it for manual review rather
+      # than committing from a CI token or changing the test branch.
+      - name: Verify generated npm lockfile is valid JSON
+        run: |
+          node - <<'JS'
+          const fs = require('fs');
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          if (![2, 3].includes(lock.lockfileVersion) || !lock.packages || !lock.packages['']) {
+            throw new Error('Invalid npm lockfile structure');
+          }
+          console.log('npm lockfile validated; version ' + lock.lockfileVersion);
+          JS
+      - name: Upload npm lockfile for maintainer review
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: taskforge-npm-lockfile-${{ github.sha }}
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 7
+      # Findings must be reviewed by maintainers; advisory service outages
+      # should not weaken the existing mandatory Laravel/browser test gates.
+      - name: Composer dependency advisory report
+        shell: bash
+        run: |
+          if composer audit --locked --no-interaction; then
+            echo 'Composer advisory check completed without reported findings.'
+          else
+            echo '::warning::Composer advisory findings or registry failure: review before release.'
+          fi
+      - name: npm high-severity advisory report
+        shell: bash
+        run: |
+          if npm audit --package-lock-only --audit-level=high; then
+            echo 'npm audit completed without high-severity findings.'
+          else
+            echo '::warning::npm audit findings or registry failure: review before release.'
+          fi
       - name: PHP syntax checks
         run: |
           find app database routes tests bootstrap -name '*.php' -print0 | xargs -0 -n1 php -l
