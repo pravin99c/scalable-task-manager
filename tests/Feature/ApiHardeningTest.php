@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class ApiHardeningTest extends TestCase
@@ -54,9 +55,13 @@ class ApiHardeningTest extends TestCase
         ])->assertOk();
 
         $this->assertDatabaseCount('personal_access_tokens', 1);
+        // A feature test reuses the application's guard; simulate a fresh
+        // HTTP request authentication cycle before verifying the token.
+        Auth::forgetGuards();
         $this->getJson('/api/v1/user', [
             'Authorization' => 'Bearer '.$desktop,
         ])->assertUnauthorized();
+        Auth::forgetGuards();
         $this->getJson('/api/v1/user', [
             'Authorization' => 'Bearer '.$mobile,
         ])->assertOk()->assertJsonPath('id', $user->id);
@@ -96,6 +101,7 @@ class ApiHardeningTest extends TestCase
             'role' => 'viewer',
         ], $this->bearer($owner))->assertOk();
 
+        Auth::forgetGuards();
         $this->postJson("/api/v1/projects/{$project->id}/members", [
             'user_id' => $outsider->id,
             'role' => 'editor',
