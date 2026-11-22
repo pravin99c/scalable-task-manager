@@ -61,8 +61,29 @@ class ProjectInvitationController extends Controller
         $now = now();
 
         $invitation = DB::transaction(function () use ($project, $data, $email, $token, $now, $request) {
-            // Lock the issuer to serialize quotas even across multiple projects.
-            DB::table('users')->where('id', $request->user()->getKey())->lockForUpdate()->first();
+            // Serialize the quota across ALL project owners. Lock the same
+            // SHA-256 recipient key for every sender; lock issuer and project
+            // keys too, in a deterministic order to reduce deadlock cycles.
+            $keys = [
+                hash('sha256', 'recipient:'.$email),
+                hash('sha256', 'project:'.$project->getKey()),
+                hash('sha256', 'issuer:'.$request->user()->getKey()),
+            ];
+            sort($keys, SORT_STRING);
+
+            foreach ($keys as $key) {
+                DB::table('invitation_rate_limit_locks')->insertOrIgnore([
+                    'key_hash' => $key,
+                    'last_seen_at' => $now,
+                ]);
+            }
+
+            foreach ($keys as $key) {
+                DB::table('invitation_rate_limit_locks')
+                    ->where('key_hash', $key)->lockForUpdate()->first();
+                DB::table('invitation_rate_limit_locks')
+                    ->where('key_hash', $key)->update(['last_seen_at' => $now]);
+            }
 
             $since = $now->copy()->subDay();
             $recipientCount = ProjectInvitation::query()->where('email', $email)
@@ -98,7 +119,7 @@ class ProjectInvitationController extends Controller
                 ->onConnection('database')->onQueue('mail')->beforeCommit();
 
             return $invitation;
-        });
+        }, 3);
 
         return ApiResponse::item($this->present($invitation), 201);
     }
