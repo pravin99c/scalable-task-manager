@@ -121,6 +121,8 @@ class EmailOwnershipAndDeliveryTest extends TestCase
         $challenge = EmailVerificationChallenge::where('user_id', $invitee->id)->firstOrFail();
         $proof = $this->queuedToken('verification', $challenge->id);
         $this->as($invitee)->postJson('/api/v2/auth/email/verify', ['token' => $proof])->assertOk();
+        // Feature tests reuse the model object; a real HTTP request reloads it.
+        $invitee->refresh();
 
         $this->as($invitee)->postJson('/api/v2/invitations/accept', ['token' => $token])
             ->assertOk()->assertJsonPath('data.role', 'editor');
