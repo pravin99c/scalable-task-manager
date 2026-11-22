@@ -8,6 +8,7 @@ use App\Services\EmailChangeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -34,6 +35,15 @@ class EmailChangeController extends Controller
         }
 
         $service->change($request->user(), $data['email']);
+
+        // On the browser's stateful Sanctum path, invalidate the CURRENT web
+        // session as well. A session middleware write at response completion
+        // must not recreate an authenticated session after the email change.
+        if ($request->hasSession() && Auth::guard('web')->check()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         // All old tokens and database sessions are revoked by the model event.
         return ApiResponse::message('Email changed. Sign in again and verify the new address.');

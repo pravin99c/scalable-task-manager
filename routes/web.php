@@ -56,3 +56,18 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class, \App\Htt
 
         Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
     });
+
+
+// Non-admin TaskForge workspace. The existing admin panel is unchanged.
+// All JSON auth actions use Laravel's web session and CSRF protection.
+Route::prefix('app/api')->middleware('throttle:60,1')->group(function () {
+    Route::get('session', [\App\Http\Controllers\TaskForgeSessionController::class, 'session']);
+    Route::post('login', [\App\Http\Controllers\TaskForgeSessionController::class, 'login'])->middleware('throttle:6,1');
+    Route::post('register', [\App\Http\Controllers\TaskForgeSessionController::class, 'register'])->middleware('throttle:6,1');
+    Route::post('logout', [\App\Http\Controllers\TaskForgeSessionController::class, 'logout'])->middleware('auth');
+});
+
+Route::get('/app', fn () => view('taskforge'))->name('taskforge.app');
+Route::get('/app/{path}', fn () => view('taskforge'))
+    ->where('path', '^(?!api(?:/|$)).*')
+    ->name('taskforge.fallback');

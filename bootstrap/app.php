@@ -21,7 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // Stateful first-party API requests use Laravel's HTTP-only session
+        // and CSRF protection. Existing bearer-token clients remain supported.
+        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Keep legacy v1 exception responses intact. v2 uses one JSON envelope.
