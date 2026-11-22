@@ -7,6 +7,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-0B7285)](LICENSE)
 ![Status](https://img.shields.io/badge/Status-Active%20development-F59E0B)
 
+## Dashboard design preview
+
+![TaskForge future dashboard design concept](docs/images/taskforge-dashboard-concept.webp)
+
+> **Design concept, not a screenshot of working software.** This visual illustrates the planned workspace overview, Kanban task board, progress tracking, team activity, and responsive interface. Actual application pages and screenshots will be added as features are implemented and tested.
+
 **Project status:** Work in progress. The `main` branch is the public project landing page; **[the Laravel application source is on the `development` branch](https://github.com/pravin99c/scalable-task-manager/tree/development)**. This software has not yet completed its security review, reproducible build verification, performance benchmarking, or release testing. **Do not deploy it as a public production service yet.**
 
 ## What the development branch contains
