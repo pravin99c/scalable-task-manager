@@ -6,7 +6,8 @@
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
@@ -24,7 +25,8 @@
     "vitest": "^3.0.5",
     "jsdom": "^26.0.0",
     "@testing-library/react": "^16.1.0",
-    "@testing-library/jest-dom": "^6.6.3"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@playwright/test": "^1.56.1"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

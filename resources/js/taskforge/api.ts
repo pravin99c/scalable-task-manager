@@ -19,7 +19,7 @@ export function firstError(error: unknown): string {
     return Object.values(error.errors).flat()[0] || error.message;
 }
 
-export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}, retryOnCsrf = true): Promise<T> {
     const method = (options.method ?? 'GET').toUpperCase();
     const headers = new Headers(options.headers);
     headers.set('Accept', 'application/json');
@@ -46,6 +46,12 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     let payload: unknown;
     try { payload = text ? JSON.parse(text) as unknown : null; } catch { payload = null; }
 
+    if (response.status === 419 && retryOnCsrf && path !== '/app/api/session') {
+        // Laravel rejected the mutation before it reached a controller.
+        clearCsrf();
+        await session();
+        return request<T>(path, options, false);
+    }
     if (!response.ok) {
         const json = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {};
         const errors = json.errors && typeof json.errors === 'object' && !Array.isArray(json.errors)

@@ -55,4 +55,29 @@ describe('TaskForge same-origin API client', () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ data: null, csrf_token: 'test-only' })));
         expect((await session()).csrf_token).toBe('test-only');
     });
+
+    it('recovers once when the browser CSRF token expires', async () => {
+        const fetchMock = vi.fn()
+            .mockResolvedValueOnce(json({ data: null, csrf_token: 'stale' }))
+            .mockResolvedValueOnce(json({ message: 'CSRF expired' }, 419))
+            .mockResolvedValueOnce(json({ data: null, csrf_token: 'fresh' }))
+            .mockResolvedValueOnce(json({ data: { id: 7, name: 'Retried' }, meta: null, links: null }, 201));
+        vi.stubGlobal('fetch', fetchMock);
+        expect((await api.createProject('Retried', '')).data.id).toBe(7);
+        expect(fetchMock).toHaveBeenCalledTimes(4);
+        expect(new Headers(fetchMock.mock.calls[1][1].headers).get('X-CSRF-TOKEN')).toBe('stale');
+        expect(new Headers(fetchMock.mock.calls[3][1].headers).get('X-CSRF-TOKEN')).toBe('fresh');
+    });
+
+    it('does not retry a permanently invalid CSRF token forever', async () => {
+        const fetchMock = vi.fn()
+            .mockResolvedValueOnce(json({ data: null, csrf_token: 'old' }))
+            .mockResolvedValueOnce(json({ message: 'CSRF expired' }, 419))
+            .mockResolvedValueOnce(json({ data: null, csrf_token: 'also-old' }))
+            .mockResolvedValueOnce(json({ message: 'CSRF expired again' }, 419));
+        vi.stubGlobal('fetch', fetchMock);
+        await expect(api.createProject('No', '')).rejects.toMatchObject({ status: 419 });
+        expect(fetchMock).toHaveBeenCalledTimes(4);
+    });
+
 });
