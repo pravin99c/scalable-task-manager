@@ -1,77 +1,67 @@
 # TaskForge · Scalable Task Manager
 
-> A Laravel-based project and task management application built to explore maintainable backend architecture, secure collaboration, queues, and real-time workflows.
+> A Laravel project and task management API exploring secure collaboration, role-aware access, and maintainable backend architecture.
 
-[![Laravel](https://img.shields.io/badge/Laravel-11%20%28development%29-FF2D20?logo=laravel&logoColor=white)](https://laravel.com)
-[![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php&logoColor=white)](https://www.php.net)
+[![Laravel](https://img.shields.io/badge/Laravel-11-FF2D20?logo=laravel&logoColor=white)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php&logoColor=white)](https://php.net)
 [![License: MIT](https://img.shields.io/badge/License-MIT-0B7285)](LICENSE)
-![Status](https://img.shields.io/badge/Status-Active%20development-F59E0B)
+![Project maturity](https://img.shields.io/badge/Status-Development%20%2F%20Security%20Review-F59E0B)
 
-## Dashboard design preview
+## Dashboard preview
 
-![TaskForge future dashboard design concept](docs/images/taskforge-dashboard-concept.webp)
+![TaskForge proposed dark dashboard and Kanban design](docs/images/taskforge-dashboard-concept.webp)
 
-> **Design concept, not a screenshot of working software.** This visual illustrates the planned workspace overview, Kanban task board, progress tracking, team activity, and responsive interface. Actual application pages and screenshots will be added as features are implemented and tested.
+> **Design concept — not a screenshot of a working UI.** The current application includes a Blade admin interface. The dashboard and Kanban design above illustrates a planned React/TypeScript experience.
 
-**Project status:** Work in progress. The `main` branch is the public project landing page; **[the Laravel application source is on the `development` branch](https://github.com/pravin99c/scalable-task-manager/tree/development)**. This software has not yet completed its security review, reproducible build verification, performance benchmarking, or release testing. **Do not deploy it as a public production service yet.**
+## What is implemented
 
-## What the development branch contains
+The codebase contains a Laravel 11 API, Laravel Sanctum authentication, project/task CRUD, comments, activity logging, PHP unit and feature tests, and Docker development configuration. The project-membership foundation defines **owner**, **editor**, and **viewer** access levels.
 
-| Area | Existing source code | Work remaining |
-| --- | --- | --- |
-| Laravel API | Auth, projects, tasks and comments controllers | Resource authorization, workspace scoping and API consistency |
-| Application architecture | Service and repository classes | Consistent data contracts, pagination and transactional workflows |
-| Admin interface | Blade-based administration pages | RBAC consistency, modern UX and access-control tests |
-| Data | Eloquent models, migrations, factories and seeders | Migration validation, indexing and safe demo account setup |
-| Async workflows | Queue job and task-update event | Actual notification delivery, job retries and event authorization |
-| Development tooling | Docker Compose files and PHPUnit tests | One verified install path, CI and expanded automated coverage |
+| Role | Read projects and tasks | Create / edit tasks | Manage members | Delete project |
+| --- | --- | --- | --- | --- |
+| Owner | Yes | Yes | Yes | Yes |
+| Editor | Yes | Yes | No | No |
+| Viewer | Yes | No | No | No |
+| Non-member | No | No | No | No |
 
-Descriptions above document **code present in the branch**, not guarantees that every capability currently works.
+Project membership uses explicitly authorized existing users. **Invitation emails, full workspace tenancy, polished React UI, and production deployment are not complete.** The legacy global administrator UI remains restricted to explicitly assigned superadmins.
 
-## Explore the project
-
-- **[Application source](https://github.com/pravin99c/scalable-task-manager/tree/development)** — Laravel app, API routes, models, services, views and tests.
-- **[Development branch README](https://github.com/pravin99c/scalable-task-manager/blob/development/README.md)** — existing technical notes (some claims require verification).
-- **[Implementation roadmap](docs/ROADMAP.md)** — practical phases, security priorities and release criteria.
-- **[Contributing guide](CONTRIBUTING.md)** — how to propose improvements safely.
-
-## Proposed architecture
-
-```text
-Browser (current Blade admin; planned React/TypeScript UI)
-              |
-       Laravel + Sanctum
-              |
-      Controllers / Policies
-              |
-        Domain services
-          /       \
-       MySQL     Redis
-                  |
-             Queue workers
-       (and authorized events)
-```
-
-**Technical direction:** Laravel + PHP, MySQL, Redis, Sanctum, Laravel Horizon, authorized real-time broadcasting, and Docker-based development. Future React/TypeScript work will follow security and API stabilization.
-
-## Local evaluation
-
-The existing application has not been validated in a fresh environment during this review. To inspect it:
+## Development quick start
 
 ```bash
 git clone https://github.com/pravin99c/scalable-task-manager.git
 cd scalable-task-manager
-git switch development
+composer install
+cp .env.example .env
+php artisan key:generate
+# Configure an isolated local database in .env first.
+php artisan migrate
+php artisan test
 ```
 
-Inspect the `composer.json`, `.env.example`, `compose.yaml` and `docker-compose.yml` before starting. The development branch currently contains two Compose configurations; standardizing them and publishing a **tested** setup guide is an initial roadmap task. Never expose the current development build to the public internet.
+For an environment that needs Docker, inspect the existing Compose files and follow the [security validation guide](docs/SECURITY_VALIDATION.md) before exposing any services. Avoid running destructive migration commands against real data.
 
-## Help improve TaskForge
+## API overview
 
-Code review, tests, accessibility improvements, documentation suggestions and reproducible setup reports are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Please **do not post security vulnerabilities or credentials in public issues**.
+Authenticated endpoints include `/api/v1/projects`, `/api/v1/tasks`, `/api/v1/tasks/{task}/comments`, and `/api/v1/projects/{project}/members`. Owners may grant an existing user **editor** or **viewer** membership; every action is checked server-side.
 
-If you find the project direction helpful, consider starring the repository to follow its progress. Stars are appreciated, but verified releases and clear documentation come first.
+See [API_USAGE.md](API_USAGE.md) for current route examples and [docs/ROADMAP.md](docs/ROADMAP.md) for future work.
+
+## Engineering and quality
+
+- **Security:** resource policies, project-scoped list queries, role-checked operations and authorization for private project channels.
+- **Data:** Eloquent models and migrations, MySQL support and an explicit project membership pivot.
+- **Automation:** GitHub Actions checks PHP syntax, a fresh disposable MySQL migration and the Laravel test suite.
+- **Work in progress:** strengthen membership regression tests, finish authorization review, verify upgrades against existing database backups, and integrate secure real-time delivery.
+
+**Release status:** This repository is a demonstration and active development project, **not a production-certified service**. CI success is necessary but does not replace independent security testing or deployment validation. No unverified throughput or latency claims are made.
+
+## Contribute and follow progress
+
+Review [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. Report credentials or security issues privately rather than opening a public exploit report. Documentation, accessibility, reproducible bug reports, and security-focused tests are especially useful.
+
+If the architecture or project is helpful to you, consider starring the repository to follow its progress.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE).
