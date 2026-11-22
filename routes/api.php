@@ -34,3 +34,11 @@ Route::prefix('v1')->group(function () {
         Route::post('tasks/{task}/comments', [CommentController::class, 'store']);
     });
 });
+
+
+// Version 2 has a stable data/meta/links envelope and bounded pagination.
+// Version 1 remains unchanged for existing clients.
+Route::prefix('v2')->middleware('auth:sanctum')->group(function () {
+    Route::apiResource('projects', \App\Http\Controllers\Api\V2\ProjectController::class);
+    Route::apiResource('tasks', \App\Http\Controllers\Api\V2\TaskController::class);
+});
