@@ -73,3 +73,21 @@ export interface Envelope<T> {
 
 export type Paginated<T> = Envelope<T[]> & { meta: PageMeta };
 export interface SessionResponse { data: User | null; csrf_token: string }
+
+export interface ProjectActivity {
+    id: number;
+    project_id: number;
+    task_id: number | null;
+    action: 'created' | 'updated' | 'deleted';
+    title: string;
+    actor: { id: number; name: string } | null;
+    created_at: string;
+}
+
+export interface ProjectNotification {
+    id: number;
+    project_id: number;
+    read_at: string | null;
+    activity: Omit<ProjectActivity, 'project_id'> | null;
+}
+export type NotificationPage = Paginated<ProjectNotification> & { unread_count: number };

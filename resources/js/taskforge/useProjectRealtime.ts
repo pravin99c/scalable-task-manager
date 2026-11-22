@@ -52,10 +52,12 @@ export function useProjectRealtime(
                         .listen('.project.activity.changed', (payload: { project_id: number; activity_id: number }) => {
                             // Refetch only after an authorized project signal.
                             if (active && payload.project_id === projectId && payload.activity_id > 0) {
+                                setStatus('connected');
                                 callback.current();
                             }
                         });
-                    setStatus('connected');
+                    // A successful subscription request does not itself prove
+                    // the socket connected; show live status only after an event.
                 } catch {
                     if (active) setStatus('polling');
                 }

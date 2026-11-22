@@ -141,7 +141,7 @@ For the exact isolated E2E procedure, see [Phase 4.2 browser validation](docs/PH
 2. Configure GitHub branch rulesets for both branches: review/required checks, block force pushes and prevent deletion. These settings require repository-owner action.
 3. Perform manual staging and device-based browser/accessibility testing, with real but controlled queue/worker/scheduler validation.
 4. Add a reproducible JavaScript dependency lockfile, dependency/security auditing, deployment documentation, verified real UI screenshots and a release checklist.
-5. **Phase 5 (planned):** authorized real-time task collaboration and notifications via Redis/Reverb, with permission tests and operational monitoring.
+5. **Phase 5 (in development):** project-scoped activity history, in-app notification read state, and optional authorized live updates with a polling fallback. See [Phase 5 collaboration](docs/PHASE5_COLLABORATION.md). Actual Reverb server deployment remains a separate task.
 
 Real-time broadcasting, production hosting, performance benchmarks and cross-browser accessibility certification are **not claimed as completed**.
 
