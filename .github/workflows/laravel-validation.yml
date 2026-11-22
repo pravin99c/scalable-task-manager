@@ -1,17 +1,21 @@
 name: Laravel security validation
 
+# Avoid duplicate CI runs for every feature-branch push. A pull request
+# runs the full suite; merges to long-lived branches run it again.
 on:
   push:
     branches:
       - main
       - development
-      - 'fix/**'
-      - 'feat/**'
-      - 'chore/**'
   pull_request:
     branches:
       - development
       - main
+
+# New commits on the same PR cancel older still-running builds.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -48,6 +52,17 @@ jobs:
           coverage: none
       - name: Install Composer dependencies
         run: composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript type checking
+        run: npm run typecheck
+      - name: React component and API tests
+        run: npm test
+      - name: Frontend production build
+        run: npm run build
       - name: PHP syntax checks
         run: |
           find app database routes tests bootstrap -name '*.php' -print0 | xargs -0 -n1 php -l
@@ -83,6 +98,105 @@ jobs:
           QUEUE_CONNECTION: sync
           SESSION_DRIVER: array
         run: php artisan test --stop-on-failure
+      - name: Install Chromium browser and required libraries
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare synthetic E2E database (no outgoing mail)
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/database/taskforge_e2e.sqlite
+          SESSION_DRIVER: database
+          QUEUE_CONNECTION: database
+          MAIL_MAILER: array
+          CACHE_STORE: array
+          TASKFORGE_ALLOW_E2E_SEED: '1'
+        run: |
+          touch database/taskforge_e2e.sqlite
+          php artisan migrate:fresh --force
+          php artisan db:seed --class=TaskForgeE2eSeeder --force
+
+      - name: Real-browser Playwright E2E tests
+        timeout-minutes: 8
+        env:
+          CI: 'true'
+          APP_ENV: local
+          APP_DEBUG: 'false'
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/database/taskforge_e2e.sqlite
+          SESSION_DRIVER: database
+          QUEUE_CONNECTION: database
+          MAIL_MAILER: array
+          CACHE_STORE: array
+          APP_URL: http://127.0.0.1:8085
+        run: npm run test:e2e
+
+      - name: Set up isolated Sail application database credentials
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          path = Path('.env')
+          values = {key: os.environ[key] for key in ('DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_ROOT_PASSWORD')}
+          lines = path.read_text().splitlines()
+          updated = []
+          for line in lines:
+              key = line.split('=', 1)[0]
+              updated.append(key + '=' + values[key] if key in values else line)
+          path.write_text(chr(10).join(updated) + chr(10))
+          PY
+      - name: Start complete Sail Laravel application (integration smoke)
+        timeout-minutes: 14
+        run: |
+          export BUILDKIT_PROGRESS=plain
+          docker compose -f compose.yaml up -d --build --wait --wait-timeout 240 laravel.test
+          docker compose -f compose.yaml exec -T laravel.test php artisan migrate --force
+          docker compose -f compose.yaml exec -T laravel.test php artisan migrate:status
+          for attempt in $(seq 1 35); do
+            code="$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/ || true)"
+            if [ "$code" = "302" ] || [ "$code" = "200" ]; then
+              break
+            fi
+            sleep 2
+          done
+          test "$code" = "302" -o "$code" = "200"
+          code="$(curl --silent --output /dev/null --write-out '%{http_code}' -H 'Accept: application/json' http://127.0.0.1:8080/api/v2/projects || true)"
+          test "$code" = "401"
+      - name: Real database queue integration tests (MySQL)
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: taskforge_ci
+          DB_USERNAME: root
+          DB_PASSWORD: root_test_only
+          QUEUE_CONNECTION: database
+          DB_QUEUE_CONNECTION: mysql
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+        run: php artisan test --filter='DurableMailIntegrationTest|Phase35SecurityTest' --stop-on-failure
+      - name: Verify scheduled cleanup and operations heartbeat
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: taskforge_ci
+          DB_USERNAME: root
+          DB_PASSWORD: root_test_only
+          CACHE_STORE: database
+        run: |
+          php artisan schedule:list
+          php artisan invitations:prune
+          php artisan taskforge:operations-check
+      - name: Print Sail diagnostics when Docker validation fails
+        if: failure()
+        run: |
+          docker compose -f compose.yaml ps || true
+          docker compose -f compose.yaml logs --no-color --tail=100 laravel.test mysql redis || true
+
       - name: Stop disposable Compose services
         if: always()
         run: docker compose -f compose.yaml down --volumes --remove-orphans

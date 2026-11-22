@@ -37,6 +37,7 @@ class ProjectMemberController extends Controller
     public function store(Request $request, Project $project): JsonResponse
     {
         Gate::authorize('manageMembers', $project);
+        abort_if($request->user()->email_verified_at === null, 403, 'Verify your email before managing members.');
 
         $data = $request->validate([
             'user_id' => ['required', 'integer', Rule::exists('users', 'id'), Rule::notIn([$project->created_by])],

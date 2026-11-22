@@ -65,3 +65,8 @@ If the architecture or project is helpful to you, consider starring the reposito
 ## License
 
 [MIT](LICENSE).
+
+
+### Phase 4 — React workspace (feature branch)
+
+The separate React + TypeScript workspace is available at **`/app`** in the Phase 4 feature branch. See [Frontend setup and API integration](docs/FRONTEND_PHASE4.md). This is a new working interface under CI review; the dashboard image above remains an illustrative concept until replaced with a verified screenshot.
