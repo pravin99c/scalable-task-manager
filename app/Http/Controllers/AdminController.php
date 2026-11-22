@@ -120,11 +120,14 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:8',
-            'roles' => 'required|array',
+            'roles' => 'required|array|min:1',
+            'roles.*' => ['integer', \Illuminate\Validation\Rule::exists('roles', 'id')->where('slug', '!=', 'superadmin')],
         ]);
         $data['password'] = bcrypt($data['password']);
+        $roleIds = $data['roles'];
+        unset($data['roles']);
         $user = User::create($data);
-        $user->roles()->sync($request->roles);
+        $user->roles()->sync($roleIds);
         return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
     }
 
@@ -145,13 +148,16 @@ class AdminController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            'roles' => 'required|array',
+            'roles' => 'required|array|min:1',
+            'roles.*' => ['integer', \Illuminate\Validation\Rule::exists('roles', 'id')->where('slug', '!=', 'superadmin')],
         ]);
         if ($request->filled('password')) {
             $data['password'] = bcrypt($request->password);
         }
+        $roleIds = $data['roles'];
+        unset($data['roles']);
         $user->update($data);
-        $user->roles()->sync($request->roles);
+        $user->roles()->sync($roleIds);
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
     }
 
@@ -255,7 +261,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
-        $data['creator_id'] = auth()->id();
+        $data['created_by'] = auth()->id();
         Project::create($data);
         return redirect()->route('admin.projects.index')->with('success', 'Project created successfully.');
     }
@@ -316,7 +322,7 @@ class AdminController extends Controller
             'priority' => 'required|in:LOW,MEDIUM,HIGH',
             'due_date' => 'nullable|date',
         ]);
-        $data['creator_id'] = auth()->id();
+        $data['created_by'] = auth()->id();
         Task::create($data);
         return redirect()->route('admin.tasks.index')->with('success', 'Task created.');
     }
