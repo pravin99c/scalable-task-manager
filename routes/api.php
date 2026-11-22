@@ -39,6 +39,8 @@ Route::prefix('v1')->group(function () {
 // Version 2 has a stable data/meta/links envelope and bounded pagination.
 // Version 1 remains unchanged for existing clients.
 Route::prefix('v2')->middleware('auth:sanctum')->group(function () {
+    Route::post('auth/email/verification/send', [\App\Http\Controllers\Api\V2\EmailVerificationController::class, 'send'])->middleware('throttle:3,10');
+    Route::post('auth/email/verify', [\App\Http\Controllers\Api\V2\EmailVerificationController::class, 'verify'])->middleware('throttle:10,10');
     Route::get('projects/{project}/invitations', [\App\Http\Controllers\Api\V2\ProjectInvitationController::class, 'index']);
     Route::post('projects/{project}/invitations', [\App\Http\Controllers\Api\V2\ProjectInvitationController::class, 'store'])->middleware('throttle:6,1');
     Route::delete('projects/{project}/invitations/{invitation}', [\App\Http\Controllers\Api\V2\ProjectInvitationController::class, 'destroy']);

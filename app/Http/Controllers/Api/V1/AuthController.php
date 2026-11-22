@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
+use App\Services\EmailOwnershipService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,17 +16,21 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
-    public function register(RegisterRequest $request): JsonResponse
+    public function register(RegisterRequest $request, EmailOwnershipService $emailOwnership): JsonResponse
     {
-        $user = User::create([
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-            'password' => Hash::make($request->validated('password')),
-        ]);
+        $user = DB::transaction(function () use ($request, $emailOwnership) {
+            $user = User::create([
+                'name' => $request->validated('name'),
+                'email' => $request->validated('email'),
+                'password' => Hash::make($request->validated('password')),
+            ]);
+            $user->refresh();
 
-        // Reload database defaults (including the safe 'user' legacy role)
-        // before serializing the freshly registered account.
-        $user->refresh();
+            // Same transaction: either account + durable verification job
+            // both commit, or neither does.
+            $emailOwnership->issue($user);
+            return $user;
+        });
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

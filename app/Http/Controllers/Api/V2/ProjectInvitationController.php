@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
-use App\Mail\ProjectInvitationMail;
+use App\Jobs\DeliverTaskForgeMail;
+use Illuminate\Support\Facades\Crypt;
 use App\Models\Project;
 use App\Models\ProjectInvitation;
 use App\Models\Task;
@@ -12,7 +13,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -39,6 +39,7 @@ class ProjectInvitationController extends Controller
     public function store(Request $request, Project $project): JsonResponse
     {
         Gate::authorize('manageMembers', $project);
+        abort_if($request->user()->email_verified_at === null, 403, 'Verify your email before sending invitations.');
 
         $data = $request->validate([
             'email' => ['required', 'string', 'email', 'max:255'],
@@ -60,7 +61,20 @@ class ProjectInvitationController extends Controller
         $now = now();
 
         $invitation = DB::transaction(function () use ($project, $data, $email, $token, $now, $request) {
-            // Expire/revoke any outstanding token for the same project/email.
+            // Lock the issuer to serialize quotas even across multiple projects.
+            DB::table('users')->where('id', $request->user()->getKey())->lockForUpdate()->first();
+
+            $since = $now->copy()->subDay();
+            $recipientCount = ProjectInvitation::query()->where('email', $email)
+                ->where('created_at', '>=', $since)->count();
+            $projectCount = ProjectInvitation::query()->where('project_id', $project->id)
+                ->where('created_at', '>=', $since)->count();
+            $issuerCount = ProjectInvitation::query()->where('invited_by', $request->user()->getKey())
+                ->where('created_at', '>=', $since)->count();
+            if ($recipientCount >= 3 || $projectCount >= 20 || $issuerCount >= 50) {
+                abort(429, 'Invitation sending limit reached.');
+            }
+
             ProjectInvitation::query()
                 ->where('project_id', $project->id)
                 ->where('email', $email)
@@ -77,14 +91,11 @@ class ProjectInvitationController extends Controller
                 'expires_at' => $now->copy()->addDays(7),
             ]);
 
-            // Any send failure rolls back the invitation record in this
-            // synchronous implementation; production should adopt an outbox.
-            Mail::to($email)->send(new ProjectInvitationMail(
-                $project->name,
-                $data['role'],
-                $token,
-                $invitation->expires_at->utc()->format('Y-m-d H:i:s'),
-            ));
+            // Force the database queue, which shares this transaction's DB
+            // connection. Enqueue and invitation commit atomically; a worker
+            // cannot see this job until commit. Queue payload is encrypted.
+            DeliverTaskForgeMail::dispatch('invitation', $invitation->id, Crypt::encryptString($token))
+                ->onConnection('database')->onQueue('mail')->beforeCommit();
 
             return $invitation;
         });
@@ -108,6 +119,10 @@ class ProjectInvitationController extends Controller
         $data = $request->validate([
             'token' => ['required', 'string', 'min:40', 'max:256'],
         ]);
+
+        // Same-email account matching alone was insecure: the recipient must
+        // prove control of the mailbox through a separate verification token.
+        abort_if($request->user()->email_verified_at === null, 403, 'Verify your email before accepting an invitation.');
 
         $result = DB::transaction(function () use ($request, $data) {
             $invitation = ProjectInvitation::query()

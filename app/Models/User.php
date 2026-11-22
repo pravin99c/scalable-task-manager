@@ -11,6 +11,16 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    protected static function booted(): void
+    {
+        static::updating(function (self $user) {
+            // A changed email address must prove ownership again.
+            if ($user->isDirty('email')) {
+                $user->email_verified_at = null;
+            }
+        });
+    }
+
     protected $fillable = [
         'name',
         'email',

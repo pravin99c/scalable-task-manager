@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\User;
+use App\Models\ProjectInvitation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,7 +43,15 @@ class ProjectMemberController extends Controller
             'role' => ['required', Rule::in(['editor', 'viewer'])],
         ]);
 
-        DB::transaction(function () use ($project, $data) {
+        $target = User::findOrFail($data['user_id']);
+        abort_if($target->email_verified_at === null, 422, 'The new member must verify their email first.');
+
+        DB::transaction(function () use ($project, $data, $target) {
+            ProjectInvitation::query()->where('project_id', $project->id)
+                ->where('email', strtolower($target->email))
+                ->whereNull('accepted_at')->whereNull('revoked_at')
+                ->update(['revoked_at' => now()]);
+
             $project->members()->syncWithoutDetaching([
                 $data['user_id'] => ['role' => $data['role']],
             ]);
@@ -65,6 +75,13 @@ class ProjectMemberController extends Controller
         abort_unless($project->members()->whereKey($user)->exists(), 404);
 
         DB::transaction(function () use ($project, $user) {
+            $removed = User::find($user);
+            if ($removed) {
+                ProjectInvitation::query()->where('project_id', $project->id)
+                    ->where('email', strtolower($removed->email))
+                    ->whereNull('accepted_at')->whereNull('revoked_at')
+                    ->update(['revoked_at' => now()]);
+            }
             $project->members()->detach($user);
             Task::query()->where('project_id', $project->id)
                 ->where('assigned_to', $user)->update(['assigned_to' => null]);
