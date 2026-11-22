@@ -48,6 +48,7 @@ class AdminController extends Controller
 
         if (Auth::attempt($credentials) && Auth::user()->hasRole('superadmin')) {
             $request->session()->regenerate();
+            $request->session()->put('taskforge_session_version', (int) Auth::user()->session_version);
             return redirect()->route('admin.dashboard');
         }
 
@@ -156,8 +157,16 @@ class AdminController extends Controller
         }
         $roleIds = $data['roles'];
         unset($data['roles']);
-        $user->update($data);
-        $user->roles()->sync($roleIds);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $data, $roleIds) {
+            if (strcasecmp($user->email, $data['email']) !== 0) {
+                app(\App\Services\EmailChangeService::class)->change($user, $data['email']);
+            }
+            unset($data['email']);
+            $user->update($data);
+            $user->roles()->sync($roleIds);
+        });
+
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
     }
 

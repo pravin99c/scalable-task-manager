@@ -11,7 +11,7 @@ Route::get('/admin/login', [AdminController::class, 'loginForm'])->name('admin.l
 Route::post('/admin/login', [AdminController::class, 'login'])->name('admin.login.post');
 
 // Admin Protected Routes
-Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
+Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class, \App\Http\Middleware\EnsureSessionVersion::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {

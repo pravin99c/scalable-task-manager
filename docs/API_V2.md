@@ -83,3 +83,8 @@ The initial email-verification workflow is API-only; there is no frontend or pub
 GitHub Actions performs PHP syntax checks, disposable MySQL/Redis startup tests, clean MySQL migration and PHPUnit feature tests. These checks do **not** certify real-world email deliverability, staging-data migration safety, or production readiness.
 
 Existing `/api/v1` response formats and routes remain unchanged for compatibility.
+
+
+## Phase 3.5 account security
+
+Authenticated accounts can request `PATCH /api/v2/auth/email` with `email` and `current_password`. A successful change returns a sign-in-again message, revokes existing API tokens and database-backed sessions, clears prior membership and invitations, and starts email verification for the new address. Existing projects remain owned by the account. Pending verification and invitation tokens for the previous address cannot be used. Mail delivery receipts avoid duplicate sends after acknowledged completion, but cannot guarantee exactly-once delivery if a mail transport crashes after accepting a message.
