@@ -33,3 +33,9 @@ This is a *static* configuration check: it cannot prove that secrets are unique,
 ## Run discipline
 
 Use a feature branch targeting `development`; produce a single draft PR for review and avoid manual CI reruns unless a failure requires it. Existing production data and branch history remain untouched. Do not send email notifications through the application while validating this phase.
+
+## Second increment: HTML workspace response hardening
+
+The TaskForge HTML routes `/app` and `/app/{path}` (excluding `/app/api/*`) now attach conservative defense-in-depth response headers through `SecureWorkspaceResponse`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, and a restrictive camera/microphone/geolocation `Permissions-Policy`. Existing values are preserved if an upstream middleware already supplied them. The middleware is deliberately scoped to workspace HTML so current admin and JSON API behavior is unchanged.
+
+This is **not** a complete browser security policy. A reviewed Content-Security-Policy (including development Vite and production asset/nonces), HSTS at the HTTPS reverse proxy, certificate monitoring, and explicit trusted-proxy/host configuration remain release gates. Do not enable HSTS for localhost or HTTP development. Feature tests exercise root and nested workspace routes plus API isolation; CI is the source of truth for validation.
