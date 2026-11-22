@@ -2,32 +2,30 @@
 
 namespace App\Http\Requests\Task;
 
+use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTaskRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return true;
+        $task = $this->route('task');
+
+        return $this->user() !== null
+            && $task instanceof Task
+            && $this->user()->can('update', $task);
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            'title' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'assigned_to' => 'nullable|exists:users,id',
-            'status' => 'sometimes|in:TODO,IN_PROGRESS,DONE',
-            'priority' => 'sometimes|in:LOW,MEDIUM,HIGH',
-            'due_date' => 'nullable|date',
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'assigned_to' => ['nullable', 'integer', Rule::in([$this->user()->getKey()])],
+            'status' => ['sometimes', Rule::in(['TODO', 'IN_PROGRESS', 'DONE'])],
+            'priority' => ['sometimes', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
+            'due_date' => ['nullable', 'date'],
         ];
     }
 }

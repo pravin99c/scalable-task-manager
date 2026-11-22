@@ -1,14 +1,16 @@
 <?php
 
+use App\Models\Project;
 use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    return (int) $user->id === (int) $id;
+    return (int) $user->getKey() === (int) $id;
 });
 
-// Authorize users to listen on their project's private channel
 Broadcast::channel('project.{projectId}', function ($user, $projectId) {
-    // Any authenticated user can listen to project channels
-    // You can refine this to check project membership
-    return $user !== null;
+    // No project-membership system exists yet. Authorize only the owner.
+    return Project::query()
+        ->whereKey($projectId)
+        ->where('created_by', $user->getKey())
+        ->exists();
 });
