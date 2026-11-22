@@ -6,10 +6,15 @@ on:
       - development
       - main
       - 'fix/**'
+      - 'feat/**'
+      - 'chore/**'
   pull_request:
     branches:
       - development
       - main
+
+permissions:
+  contents: read
 
 jobs:
   syntax-and-tests:

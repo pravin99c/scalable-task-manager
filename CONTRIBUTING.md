@@ -5,14 +5,14 @@ Thanks for your interest in this Laravel task-management project.
 ## Before opening a pull request
 
 1. Read [README.md](README.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
-2. Check existing issues and open a focused discussion before large changes.
+2. Check existing issues and open a focused discussion before large changes. Read [repository governance](docs/REPOSITORY_GOVERNANCE.md) for branch and review rules.
 3. Branch from `development` for application code; use a short, descriptive branch name.
 4. Keep changes small and explain the problem, solution, tests and any migration impacts.
 5. Do not include secrets, real user data, tokens or private company code.
 
 ## Current development caveat
 
-The `development` branch has an existing Laravel 11 codebase, but clean setup and the full test suite have **not** yet been independently verified. The README on `main` is an honest project landing page. Please avoid labeling unfinished features as working.
+The `main` and `development` branches were synchronized on 2026-11-22. On the verified synchronization commit, GitHub Actions passed PHP lint, a fresh disposable MySQL migration, and the SQLite-backed Laravel tests. **A clean full Docker setup, upgrades of existing databases, and production deployment are not yet verified.** Do not label unfinished features production-ready.
 
 ## Quality checklist
 
