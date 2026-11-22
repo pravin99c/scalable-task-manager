@@ -35,9 +35,21 @@ class Project extends Model
 
     public function hasMember(User $user, ?string $role = null): bool
     {
-        return $this->members()->whereKey($user->getKey())
-            ->when($role !== null, fn ($query) => $query->wherePivot('role', $role))
+        return \Illuminate\Support\Facades\DB::table('project_user')
+            ->where('project_id', $this->getKey())
+            ->where('user_id', $user->getKey())
+            ->when($role !== null, fn ($query) => $query->where('role', $role))
             ->exists();
+    }
+
+    public function canAssignTo(int $userId): bool
+    {
+        return (int) $this->created_by === $userId
+            || \Illuminate\Support\Facades\DB::table('project_user')
+                ->where('project_id', $this->getKey())
+                ->where('user_id', $userId)
+                ->where('role', 'editor')
+                ->exists();
     }
 
     public function scopeAccessibleTo(Builder $query, User $user): Builder
