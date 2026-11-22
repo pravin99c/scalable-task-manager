@@ -66,6 +66,9 @@ jobs:
             echo "::warning::package-lock.json missing; npm install is not reproducible"
             npm install --no-audit --no-fund
           fi
+      - name: Verify reviewed npm lockfile provenance when committed
+        if: ${{ hashFiles('package-lock.json') != '' }}
+        run: python3 scripts/validate_npm_lockfile.py
       - name: TypeScript type checking
         run: npm run typecheck
       - name: React component and API tests
