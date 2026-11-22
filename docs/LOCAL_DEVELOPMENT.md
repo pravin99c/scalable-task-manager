@@ -49,7 +49,7 @@ docker compose -f compose.yaml config --quiet
 ./vendor/bin/sail artisan test
 ```
 
-The app is served at **http://localhost:8080**. The current root URL redirects to the administrator login; it is not a public self-service dashboard yet. Run `./vendor/bin/sail artisan queue:work --tries=3` in a separate shell to process queued development tasks. Optional frontend assets may be built with `npm install && npm run build` (requires Node.js) or the Sail Node command.
+The app is served at **http://localhost:8080**. The current root URL redirects to the administrator login; it is not a public self-service dashboard yet. Run `./vendor/bin/sail artisan queue:work database --queue=mail --tries=5` in a separate supervised process to deliver email-ownership and invitation messages, plus `./vendor/bin/sail artisan schedule:work` for expiry cleanup. For other app jobs run a separate queue worker for the configured Redis queue. See [API v2 Phase 3 documentation](API_V2.md). Optional frontend assets may be built with `npm install && npm run build` (requires Node.js) or the Sail Node command.
 
 No administrator account is created automatically. See [security validation](SECURITY_VALIDATION.md) for the **explicit local-only** administrator bootstrap process; use unique local credentials.
 

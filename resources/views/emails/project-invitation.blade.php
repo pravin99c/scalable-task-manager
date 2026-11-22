@@ -1,7 +1,7 @@
 You have been invited to join the TaskForge project "{{ $projectName }}" as a {{ $role }}.
 
 This invitation is for the email address at which you received this message.
-Sign in to TaskForge with that same verified account email address to accept it.
+Sign in to TaskForge using the account that controls this mailbox. If the account email is not yet verified, request an email verification code through POST /api/v2/auth/email/verification/send and confirm it with POST /api/v2/auth/email/verify before accepting this invitation.
 
 Use the invitation token below with a POST request to /api/v2/invitations/accept:
 
