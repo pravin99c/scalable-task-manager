@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
+import { useDialogAccessibility } from './useDialogAccessibility';
 import type { MemberList, Priority, Task, TaskStatus } from './types';
 
 export interface TaskDraft {
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function TaskForm({ task, members, canDelete, busy, onClose, onSave, onDelete }: Props) {
+    const dialogRef = useDialogAccessibility<HTMLElement>(true, onClose, busy);
     const [title, setTitle] = useState(task?.title ?? '');
     const [description, setDescription] = useState(task?.description ?? '');
     const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'TODO');
@@ -46,7 +48,7 @@ export function TaskForm({ task, members, canDelete, busy, onClose, onSave, onDe
     const editors = members?.members.filter(m => m.role === 'editor') ?? [];
     return (
         <div className="modal-backdrop" role="presentation" onMouseDown={e=>{ if (e.target===e.currentTarget) onClose(); }}>
-            <section className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="task-modal-heading">
+            <section ref={dialogRef} tabIndex={-1} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="task-modal-heading">
                 <header className="modal-heading">
                     <div><span className="eyebrow">TASK DETAILS</span><h2 id="task-modal-heading">{task ? 'Edit task' : 'Create a task'}</h2></div>
                     <button className="icon-button" onClick={onClose} aria-label="Close" type="button"><X size={19}/></button>

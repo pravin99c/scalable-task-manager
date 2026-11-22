@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from 're
 import { Activity, ArrowRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, FolderKanban, FolderPlus, GripVertical, Inbox, Layers3, LayoutDashboard, ListTodo, LoaderCircle, LogOut, Mail, Menu, MoreHorizontal, Plus, RefreshCcw, Search, Settings2, ShieldCheck, Sparkles, Trash2, Users, X } from 'lucide-react';
 import { ApiError, api, clearCsrf, firstError, session } from './api';
 import { AuthScreen } from './AuthScreen';
+import { useDialogAccessibility } from './useDialogAccessibility';
 import { TaskForm, type TaskDraft } from './TaskForm';
 import type { Invitation, MemberList, PageMeta, Priority, Project, SessionResponse, Task, TaskStatus, User } from './types';
 
@@ -79,6 +80,8 @@ export function App() {
     useEffect(()=>{
         if(!user || projectId===null){setTasks([]);setMembers(null);setInvitations([]);return}
         let alive=true;setLoadingTasks(true);setLoadingTeam(true);
+        // Clear previous project's membership during the transition.
+        setTasks([]);setTasksTotal(0);setMembers(null);setInvitations([]);
         const loadTasks=async()=>{
             try{
                 const collected:Task[]=[];let total=0;
@@ -118,6 +121,8 @@ export function App() {
         DONE:tasks.filter(t=>t.status==='DONE'),
     }),[tasks]);
     const percent=tasks.length?Math.round(grouped.DONE.length*100/tasks.length):0;
+    const projectDialogRef = useDialogAccessibility<HTMLElement>(projectDialog!==null, ()=>setProjectDialog(null), busy);
+    const readonlyDialogRef = useDialogAccessibility<HTMLElement>(taskDialog!==null && !canEdit && taskDialog!=='new', ()=>setTaskDialog(null), busy);
 
     const failure=(e:unknown)=>{
         setNotice('');setError(firstError(e));
@@ -261,7 +266,7 @@ export function App() {
                 <footer className="dashboard-footer"><span>© TaskForge</span><span><ShieldCheck size={14}/> Secure, team-first work</span></footer>
             </div>
         </main>
-        {projectDialog&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setProjectDialog(null)}}><section className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="project-heading"><header className="modal-heading"><div><span className="eyebrow">PROJECT WORKSPACE</span><h2 id="project-heading">{projectDialog==='new'?'Create project':'Edit project'}</h2></div><button className="icon-button" aria-label="Close" onClick={()=>setProjectDialog(null)}><X size={19}/></button></header><form className="stack-form" onSubmit={saveProject}><label>Project name<input autoFocus required maxLength={255} value={projectName} onChange={e=>setProjectName(e.target.value)} placeholder="e.g. Website redesign"/></label><label>Description<textarea rows={3} value={projectDescription} onChange={e=>setProjectDescription(e.target.value)} placeholder="What are you working on?"/></label><div className="modal-actions">{projectDialog==='edit'&&<button className="button button-danger" type="button" onClick={deleteProject} disabled={busy}>Delete project</button>}<span className="grow"/><button className="button button-ghost" type="button" onClick={()=>setProjectDialog(null)}>Cancel</button><button className="button button-primary" type="submit" disabled={busy||!projectName.trim()}>{busy?'Saving…':projectDialog==='new'?'Create project':'Save changes'}</button></div></form></section></div>}
-        {taskDialog&&selected&&(canEdit?<TaskForm key={taskDialog==='new'?'new':taskDialog.id} task={taskDialog==='new'?null:taskDialog} members={members} canDelete={isOwner} busy={busy} onClose={()=>setTaskDialog(null)} onSave={saveTask} onDelete={deleteTask}/>:taskDialog!=='new'&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setTaskDialog(null)}}><section role="dialog" aria-modal="true" className="modal-panel"><header className="modal-heading"><h2>{taskDialog.title}</h2><button className="icon-button" aria-label="Close" onClick={()=>setTaskDialog(null)}><X size={18}/></button></header><p>{taskDialog.description||'No description.'}</p><div className="read-only-task"><span className="priority">{taskDialog.priority}</span><span>{taskDialog.status}</span><span>{dateLabel(taskDialog.due_date)}</span></div><button className="button button-ghost" onClick={()=>setTaskDialog(null)}>Close</button></section></div>)}
+        {projectDialog&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setProjectDialog(null)}}><section ref={projectDialogRef} tabIndex={-1} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="project-heading"><header className="modal-heading"><div><span className="eyebrow">PROJECT WORKSPACE</span><h2 id="project-heading">{projectDialog==='new'?'Create project':'Edit project'}</h2></div><button className="icon-button" aria-label="Close" onClick={()=>setProjectDialog(null)}><X size={19}/></button></header><form className="stack-form" onSubmit={saveProject}><label>Project name<input autoFocus required maxLength={255} value={projectName} onChange={e=>setProjectName(e.target.value)} placeholder="e.g. Website redesign"/></label><label>Description<textarea rows={3} value={projectDescription} onChange={e=>setProjectDescription(e.target.value)} placeholder="What are you working on?"/></label><div className="modal-actions">{projectDialog==='edit'&&<button className="button button-danger" type="button" onClick={deleteProject} disabled={busy}>Delete project</button>}<span className="grow"/><button className="button button-ghost" type="button" onClick={()=>setProjectDialog(null)}>Cancel</button><button className="button button-primary" type="submit" disabled={busy||!projectName.trim()}>{busy?'Saving…':projectDialog==='new'?'Create project':'Save changes'}</button></div></form></section></div>}
+        {taskDialog&&selected&&(canEdit?<TaskForm key={taskDialog==='new'?'new':taskDialog.id} task={taskDialog==='new'?null:taskDialog} members={members} canDelete={isOwner} busy={busy} onClose={()=>setTaskDialog(null)} onSave={saveTask} onDelete={deleteTask}/>:taskDialog!=='new'&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setTaskDialog(null)}}><section ref={readonlyDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="task-readonly-heading" className="modal-panel"><header className="modal-heading"><h2 id="task-readonly-heading">{taskDialog.title}</h2><button className="icon-button" aria-label="Close" onClick={()=>setTaskDialog(null)}><X size={18}/></button></header><p>{taskDialog.description||'No description.'}</p><div className="read-only-task"><span className="priority">{taskDialog.priority}</span><span>{taskDialog.status}</span><span>{dateLabel(taskDialog.due_date)}</span></div><button className="button button-ghost" onClick={()=>setTaskDialog(null)}>Close</button></section></div>)}
     </div>;
 }

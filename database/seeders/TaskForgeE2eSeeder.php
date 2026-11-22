@@ -31,15 +31,17 @@ class TaskForgeE2eSeeder extends Seeder
         $owner = User::create([
             'name' => 'E2E Project Owner',
             'email' => 'e2e-owner@example.test',
-            'email_verified_at' => now(),
             'password' => $password,
         ]);
+        $owner->forceFill(['email_verified_at' => now()])->save();
+
         $viewer = User::create([
             'name' => 'E2E Readonly Viewer',
             'email' => 'e2e-viewer@example.test',
-            'email_verified_at' => now(),
             'password' => $password,
         ]);
+        $viewer->forceFill(['email_verified_at' => now()])->save();
+
         $invitee = User::create([
             'name' => 'E2E Pending Invitee',
             'email' => 'e2e-invitee@example.test',
