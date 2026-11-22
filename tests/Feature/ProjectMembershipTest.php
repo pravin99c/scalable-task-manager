@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ProjectMembershipTest extends TestCase
@@ -14,7 +15,10 @@ class ProjectMembershipTest extends TestCase
 
     private function auth(User $user): array
     {
-        return ['Authorization' => 'Bearer '.$user->createToken('membership-test')->plainTextToken];
+        // Explicitly reset the authenticated identity between requests in this test.
+        // A test client may otherwise reuse the prior request's guard user.
+        Sanctum::actingAs($user);
+        return [];
     }
 
     public function test_owner_can_add_editor_who_can_access_project_and_create_tasks(): void
@@ -92,6 +96,7 @@ class ProjectMembershipTest extends TestCase
         $this->deleteJson("/api/v1/projects/{$project->id}/members/{$editor->id}", [], $this->auth($owner))
             ->assertOk();
 
+        $this->assertDatabaseMissing('project_user', ['project_id' => $project->id, 'user_id' => $editor->id]);
         $this->assertDatabaseHas('tasks', ['id' => $task->id, 'assigned_to' => null]);
         $this->getJson("/api/v1/projects/{$project->id}", $this->auth($editor))->assertForbidden();
         $this->getJson("/api/v1/tasks/{$task->id}", $this->auth($editor))->assertForbidden();
