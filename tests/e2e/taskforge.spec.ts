@@ -12,7 +12,9 @@ async function signIn(page: Page, email: string): Promise<void> {
     await page.getByLabel('Email address').fill(email);
     await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    // The topbar account control is visible on desktop and mobile;
+    // Sign out is intentionally hidden inside the closed mobile sidebar.
+    await expect(page.getByRole('button', { name: 'Account settings' })).toBeVisible();
 }
 
 test('guest cannot access API projects or bypass the real CSRF guard', async ({ page }) => {
