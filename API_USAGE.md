@@ -43,3 +43,8 @@ curl http://127.0.0.1:8000/api/v1/projects \
 The current branch has Laravel 11 services, project/task CRUD, comments, and foundations for queues and broadcasting. Existing documentation may describe features not fully validated; do not assume production readiness. See [local development setup](docs/LOCAL_DEVELOPMENT.md), [Phase 1 security validation](docs/SECURITY_VALIDATION.md), and the [GitHub Actions workflow](.github/workflows/laravel-validation.yml).
 
 Task updates trigger a broadcast event and queue logic, but outbound notifications and reliable real-time delivery remain future integration work.
+
+
+## Phase 2 (version 2)
+
+See [API v2 pagination and invitation guide](docs/API_V2.md). Existing v1 routes and return shapes remain unchanged.

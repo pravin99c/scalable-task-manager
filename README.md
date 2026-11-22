@@ -45,7 +45,7 @@ For a local Docker setup, follow the [TaskForge local development guide](docs/LO
 
 Authenticated endpoints include `/api/v1/projects`, `/api/v1/tasks`, `/api/v1/tasks/{task}/comments`, and `/api/v1/projects/{project}/members`. Owners may grant an existing user **editor** or **viewer** membership; every action is checked server-side.
 
-See [API_USAGE.md](API_USAGE.md) for current route examples, [docs/ROADMAP.md](docs/ROADMAP.md) for future work, and [repository governance](docs/REPOSITORY_GOVERNANCE.md) for the branch and review policy.
+See [API_USAGE.md](API_USAGE.md) for current route examples, [API v2 design and invitation security](docs/API_V2.md) for the proposed upgrade, [docs/ROADMAP.md](docs/ROADMAP.md) for future work, and [repository governance](docs/REPOSITORY_GOVERNANCE.md) for the branch and review policy.
 
 ## Engineering and quality
 
