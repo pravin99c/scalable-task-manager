@@ -34,3 +34,15 @@ This complements the SQLite feature tests. CI must pass on the **latest commit**
 - **Existing database migrations:** A fresh CI MySQL migration does not prove rollback or safety for a real installed database. Verify against a backed-up staging copy.
 
 No feature on this branch is certified for production deployment.
+
+## Phase 3.5 review additions
+
+The Phase 3.5 feature branch introduces a **shared invitation-rate-limit lock table**. Each canonicalized recipient, issuing owner and project has a unique SHA-256 lock key. All issuing owners acquire the same recipient row in sorted key order and evaluate the past 24-hour quota while holding the row locks, instead of only locking their individual issuer accounts. The database transaction retries deadlocks up to three times. MySQL integration exercises real table-backed quota enforcement.
+
+**Account email changes:** An authenticated \`PATCH /api/v2/auth/email\` request requires the current password and a new unique email address. The change is atomic, clears verification, queues a fresh proof challenge and revokes existing Sanctum personal access tokens, database sessions, membership entries, task assignments to projects where the account was a member, pending invitations addressed to the old mailbox, pending invitations issued by that account and old verification codes. Admin user editing uses the same change service. Admin web sessions also carry a session-version check. Existing owned projects are retained. All clients must sign in again; changing an email can deliberately revoke team access.
+
+**Mail delivery receipt:** \`delivered_at\` is persisted after a successful send. A later serialized retry skips jobs with a receipt or invalid/expired tokens. This provides *best-effort duplicate suppression*, NOT exactly-once SMTP semantics. A process crash after provider acceptance but before recording delivery can still cause a duplicate email. Production needs delivery-provider reconciliation/alerting and a suitable risk/UX policy.
+
+**Operations:** \`php artisan invitations:prune\` now writes a scheduler heartbeat. \`php artisan taskforge:operations-check\` checks for a stale mail job backlog, failed jobs and an absent prune heartbeat, returning a nonzero exit code on problems. In CI, the heartbeat uses a shared MySQL cache store so independent command invocations observe the same value. Use a persistent cache in deployment, and supervise both scheduler and mail worker. Do not expose this command publicly.
+
+**Remaining validation:** The automated checks demonstrate MySQL migrations and application startup on a disposable database, not upgrade safety on real datasets or live mail deliverability. Review concurrency across independent MySQL connections and transport crash windows before production.
