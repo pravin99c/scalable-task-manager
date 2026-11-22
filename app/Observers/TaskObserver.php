@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Task;
 use App\Models\ActivityLog;
+use App\Services\ProjectActivityRecorder;
 
 class TaskObserver
 {
@@ -13,6 +14,7 @@ class TaskObserver
     public function created(Task $task): void
     {
         $this->logActivity('created', $task, null, $task->toArray());
+        app(ProjectActivityRecorder::class)->record('created', $task);
     }
 
     /**
@@ -21,6 +23,7 @@ class TaskObserver
     public function updated(Task $task): void
     {
         $this->logActivity('updated', $task, $task->getOriginal(), $task->getChanges());
+        app(ProjectActivityRecorder::class)->record('updated', $task);
     }
 
     /**
@@ -29,6 +32,7 @@ class TaskObserver
     public function deleted(Task $task): void
     {
         $this->logActivity('deleted', $task, $task->toArray(), null);
+        app(ProjectActivityRecorder::class)->record('deleted', $task);
     }
 
     protected function logActivity(string $action, Task $task, ?array $oldData, ?array $newData): void

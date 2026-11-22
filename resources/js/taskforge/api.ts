@@ -1,4 +1,4 @@
-import type { Envelope, Invitation, MemberList, Paginated, Project, SessionResponse, Task, User } from './types';
+import type { Envelope, Invitation, MemberList, Paginated, Project, ProjectActivity, NotificationPage, SessionResponse, Task, User } from './types';
 
 /**
  * Same-origin, cookie-based Laravel Sanctum client.
@@ -148,4 +148,11 @@ export const api = {
         request<Envelope<null>>('/api/v2/auth/email', {
             method: 'PATCH', body: JSON.stringify({ email, current_password: password }),
         }),
+    activity: (projectId: number, page = 1) =>
+        request<Paginated<ProjectActivity>>('/api/v2/projects/' + projectId + '/activity?page=' + page),
+    notifications: (page = 1) => request<NotificationPage>('/api/v2/notifications?page=' + page),
+    markNotificationRead: (id: number) =>
+        request<Envelope<null>>('/api/v2/notifications/' + id + '/read', { method: 'PATCH' }),
+    markAllNotificationsRead: () =>
+        request<Envelope<null>>('/api/v2/notifications/read-all', { method: 'PATCH' }),
 };
