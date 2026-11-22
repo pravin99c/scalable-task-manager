@@ -27,7 +27,23 @@ Artisan::command('invitations:prune', function () {
     $challenges = \App\Models\EmailVerificationChallenge::query()
         ->where('expires_at', '<', $before)->delete();
 
+    IlluminateSupportFacadesCache::put('taskforge:prune_last_run', now()->toIso8601String(), now()->addDays(2));
     $this->info("Marked {$expired} expired invitations; pruned {$deleted} invitations and {$challenges} email challenges.");
 })->purpose('Expire invitations and prune old token metadata');
 
 \Illuminate\Support\Facades\Schedule::command('invitations:prune')->dailyAt('03:10');
+
+
+// Operational checks are non-mutating. Run on the same database as the mail worker.
+Artisan::command('taskforge:operations-check', function () {
+    $queue = \Illuminate\Support\Facades\DB::table('jobs')->where('queue', 'mail');
+    $backlogged = (clone $queue)->where('created_at', '<', now()->subMinutes(10)->getTimestamp())->count();
+    $failed = \Illuminate\Support\Facades\DB::table('failed_jobs')->count();
+    $schedulerBeat = \Illuminate\Support\Facades\Cache::get('taskforge:prune_last_run');
+
+    $this->line("Old mail jobs: {$backlogged}; failed jobs: {$failed}");
+    $this->line($schedulerBeat ? 'Scheduler has recorded a prune run.' : 'Scheduler has no recorded prune run.');
+
+    return $backlogged > 0 || $failed > 0 || ! $schedulerBeat ? 1 : 0;
+})->purpose('Check mail queue backlog, failed jobs and scheduler heartbeat');
+

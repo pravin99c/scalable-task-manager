@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 
 class DeliverTaskForgeMail implements ShouldQueue
 {
@@ -31,7 +32,7 @@ class DeliverTaskForgeMail implements ShouldQueue
     {
         if ($this->kind === 'invitation') {
             $invite = ProjectInvitation::find($this->recordId);
-            if (! $invite || ! $invite->isPending()) {
+            if (! $invite || ! $invite->isPending() || $invite->delivered_at !== null) {
                 return;
             }
 
@@ -47,12 +48,14 @@ class DeliverTaskForgeMail implements ShouldQueue
                 Crypt::decryptString($this->encryptedToken),
                 $invite->expires_at->copy()->utc()->format('Y-m-d H:i:s'),
             ));
+            ProjectInvitation::query()->whereKey($invite->getKey())
+                ->whereNull('delivered_at')->update(['delivered_at' => now()]);
             return;
         }
 
         if ($this->kind === 'verification') {
             $challenge = EmailVerificationChallenge::find($this->recordId);
-            if (! $challenge || ! $challenge->isPending()) {
+            if (! $challenge || ! $challenge->isPending() || $challenge->delivered_at !== null) {
                 return;
             }
 
@@ -66,6 +69,8 @@ class DeliverTaskForgeMail implements ShouldQueue
                 Crypt::decryptString($this->encryptedToken),
                 $challenge->expires_at->copy()->utc()->format('Y-m-d H:i:s'),
             ));
+            EmailVerificationChallenge::query()->whereKey($challenge->getKey())
+                ->whereNull('delivered_at')->update(['delivered_at' => now()]);
             return;
         }
 
