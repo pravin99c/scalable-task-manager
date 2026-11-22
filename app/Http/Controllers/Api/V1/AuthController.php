@@ -22,6 +22,10 @@ class AuthController extends Controller
             'password' => Hash::make($request->validated('password')),
         ]);
 
+        // Reload database defaults (including the safe 'user' legacy role)
+        // before serializing the freshly registered account.
+        $user->refresh();
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
