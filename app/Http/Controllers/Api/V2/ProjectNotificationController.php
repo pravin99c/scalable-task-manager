@@ -7,7 +7,6 @@ use App\Http\Responses\ApiResponse;
 use App\Models\ProjectNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ProjectNotificationController extends Controller
 {
@@ -70,9 +69,10 @@ class ProjectNotificationController extends Controller
     public function readAll(Request $request): JsonResponse
     {
         // Access-filtered subquery also hides removed project memberships.
-        $ids = $this->accessible($request)->whereNull('read_at')->select('id');
-        DB::table('project_notifications')->whereIn('id', $ids)
-            ->update(['read_at' => now(), 'updated_at' => now()]);
+        $this->accessible($request)->whereNull('read_at')->update([
+            'read_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         return ApiResponse::message('Notifications marked read.');
     }

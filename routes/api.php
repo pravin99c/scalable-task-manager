@@ -46,6 +46,10 @@ Route::prefix('v2')->middleware('auth:sanctum')->group(function () {
     Route::post('projects/{project}/invitations', [\App\Http\Controllers\Api\V2\ProjectInvitationController::class, 'store'])->middleware('throttle:6,1');
     Route::delete('projects/{project}/invitations/{invitation}', [\App\Http\Controllers\Api\V2\ProjectInvitationController::class, 'destroy']);
     Route::post('invitations/accept', [\App\Http\Controllers\Api\V2\ProjectInvitationController::class, 'accept'])->middleware('throttle:12,1');
+    Route::get('projects/{project}/activity', [\App\Http\Controllers\Api\V2\ProjectActivityController::class, 'index']);
+    Route::get('notifications', [\App\Http\Controllers\Api\V2\ProjectNotificationController::class, 'index']);
+    Route::patch('notifications/read-all', [\App\Http\Controllers\Api\V2\ProjectNotificationController::class, 'readAll']);
+    Route::patch('notifications/{notification}/read', [\App\Http\Controllers\Api\V2\ProjectNotificationController::class, 'read']);
     Route::apiResource('projects', \App\Http\Controllers\Api\V2\ProjectController::class);
     Route::apiResource('tasks', \App\Http\Controllers\Api\V2\TaskController::class);
 });
