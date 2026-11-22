@@ -53,7 +53,7 @@ class Project extends Model
         return $query->where(function ($q) use ($user) {
             $q->where('created_by', $user->getKey())
                 ->orWhereHas('members', fn ($members) => $members
-                    ->whereKey($user->getKey())->wherePivot('role', 'editor'));
+                    ->whereKey($user->getKey())->where('project_user.role', 'editor'));
         });
     }
 }
