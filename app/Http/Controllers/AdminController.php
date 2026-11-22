@@ -30,7 +30,7 @@ class AdminController extends Controller
      */
     public function loginForm()
     {
-        if (Auth::check() && in_array(Auth::user()->role, ['superadmin', 'admin'])) {
+        if (Auth::check() && Auth::user()->hasRole('superadmin')) {
             return redirect()->route('admin.dashboard');
         }
         return view('admin.login');
@@ -46,7 +46,7 @@ class AdminController extends Controller
             'password' => 'required',
         ]);
 
-        if (Auth::attempt($credentials) && in_array(Auth::user()->role, ['superadmin', 'admin'])) {
+        if (Auth::attempt($credentials) && Auth::user()->hasRole('superadmin')) {
             $request->session()->regenerate();
             return redirect()->route('admin.dashboard');
         }
@@ -108,12 +108,14 @@ class AdminController extends Controller
     public function userCreate()
     {
         $this->checkPermission('manage_users');
+        $this->checkPermission('manage_users');
         $roles = \App\Models\Role::where('slug', '!=', 'superadmin')->get();
         return view('admin.users.form', ['user' => new User(), 'roles' => $roles]);
     }
 
     public function userStore(Request $request)
     {
+        $this->checkPermission('manage_users');
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -128,6 +130,7 @@ class AdminController extends Controller
 
     public function userEdit(User $user)
     {
+        $this->checkPermission('manage_users');
         if ($user->hasRole('superadmin')) {
             abort(403, 'Super Admin accounts cannot be modified via UI.');
         }
@@ -137,6 +140,8 @@ class AdminController extends Controller
 
     public function userUpdate(Request $request, User $user)
     {
+        $this->checkPermission('manage_users');
+        abort_if($user->hasRole('superadmin'), 403);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
@@ -153,6 +158,7 @@ class AdminController extends Controller
     public function userDestroy(User $user)
     {
         $this->checkPermission('manage_users');
+        abort_if($user->hasRole('superadmin'), 403);
         $user->delete();
         return redirect()->route('admin.users.index')->with('success', 'User deleted.');
     }
@@ -170,12 +176,14 @@ class AdminController extends Controller
     public function roleCreate()
     {
         $this->checkPermission('manage_roles');
+        $this->checkPermission('manage_roles');
         $permissions = Permission::all();
         return view('admin.roles.form', ['role' => new Role(), 'permissions' => $permissions]);
     }
 
     public function roleStore(Request $request)
     {
+        $this->checkPermission('manage_roles');
         $this->checkPermission('manage_roles');
         $data = $request->validate([
             'name' => 'required|string|max:255',
@@ -191,6 +199,7 @@ class AdminController extends Controller
     public function roleEdit(Role $role)
     {
         $this->checkPermission('manage_roles');
+        $this->checkPermission('manage_roles');
         if ($role->slug === 'superadmin') {
             abort(403, 'The Super Admin role is protected and cannot be edited.');
         }
@@ -200,6 +209,8 @@ class AdminController extends Controller
 
     public function roleUpdate(Request $request, Role $role)
     {
+        $this->checkPermission('manage_roles');
+        abort_if($role->slug === 'superadmin', 403);
         $this->checkPermission('manage_roles');
         $data = $request->validate([
             'name' => 'required|string|max:255',
@@ -215,6 +226,8 @@ class AdminController extends Controller
     public function roleDestroy(Role $role)
     {
         $this->checkPermission('manage_roles');
+        abort_if($role->slug === 'superadmin', 403);
+        $this->checkPermission('manage_roles');
         $role->delete();
         return redirect()->route('admin.roles.index')->with('success', 'Role deleted.');
     }
@@ -224,17 +237,20 @@ class AdminController extends Controller
      */
     public function projectIndex()
     {
+        $this->checkPermission('manage_projects');
         $projects = Project::with('creator')->latest()->paginate(10);
         return view('admin.projects.index', compact('projects'));
     }
 
     public function projectCreate()
     {
+        $this->checkPermission('manage_projects');
         return view('admin.projects.form', ['project' => new Project()]);
     }
 
     public function projectStore(Request $request)
     {
+        $this->checkPermission('manage_projects');
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -246,11 +262,13 @@ class AdminController extends Controller
 
     public function projectEdit(Project $project)
     {
+        $this->checkPermission('manage_projects');
         return view('admin.projects.form', compact('project'));
     }
 
     public function projectUpdate(Request $request, Project $project)
     {
+        $this->checkPermission('manage_projects');
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -261,6 +279,7 @@ class AdminController extends Controller
 
     public function projectDestroy(Project $project)
     {
+        $this->checkPermission('manage_projects');
         $project->delete();
         return redirect()->route('admin.projects.index')->with('success', 'Project deleted.');
     }
@@ -270,12 +289,14 @@ class AdminController extends Controller
      */
     public function taskIndex()
     {
+        $this->checkPermission('manage_tasks');
         $tasks = Task::with(['project', 'creator'])->latest()->paginate(10);
         return view('admin.tasks.index', compact('tasks'));
     }
 
     public function taskCreate()
     {
+        $this->checkPermission('manage_tasks');
         $projects = Project::all();
         $users = User::all();
         return view('admin.tasks.form', [
@@ -287,6 +308,7 @@ class AdminController extends Controller
 
     public function taskStore(Request $request)
     {
+        $this->checkPermission('manage_tasks');
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'project_id' => 'required|exists:projects,id',
@@ -301,6 +323,7 @@ class AdminController extends Controller
 
     public function taskEdit(Task $task)
     {
+        $this->checkPermission('manage_tasks');
         $projects = Project::all();
         $users = User::all();
         return view('admin.tasks.form', compact('task', 'projects', 'users'));
@@ -308,6 +331,7 @@ class AdminController extends Controller
 
     public function taskUpdate(Request $request, Task $task)
     {
+        $this->checkPermission('manage_tasks');
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'status' => 'required|in:TODO,IN_PROGRESS,DONE',
@@ -320,6 +344,7 @@ class AdminController extends Controller
 
     public function taskDestroy(Task $task)
     {
+        $this->checkPermission('manage_tasks');
         $task->delete();
         return redirect()->route('admin.tasks.index')->with('success', 'Task deleted.');
     }
@@ -329,6 +354,7 @@ class AdminController extends Controller
      */
     public function comments()
     {
+        $this->checkPermission('manage_tasks');
         $comments = Comment::with(['task', 'user'])->latest()->paginate(10);
         return view('admin.comments.index', compact('comments'));
     }
