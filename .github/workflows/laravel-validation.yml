@@ -76,6 +76,12 @@ jobs:
           DB_PASSWORD: root_test_only
         run: php artisan migrate:fresh --force
       - name: Feature and unit tests (isolated SQLite)
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
         run: php artisan test --stop-on-failure
       - name: Stop disposable Compose services
         if: always()
