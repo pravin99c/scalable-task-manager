@@ -75,6 +75,12 @@ class TaskForgeSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return $this->session($request);
+        // The request object may retain an already resolved user for the
+        // duration of this HTTP request. Explicitly return an anonymous
+        // session instead of serializing its cached authenticated identity.
+        return response()->json([
+            'data' => null,
+            'csrf_token' => $request->session()->token(),
+        ])->header('Cache-Control', 'no-store');
     }
 }
