@@ -16,7 +16,7 @@ return new class extends Migration
             $table->timestamp('expires_at');
             $table->timestamp('consumed_at')->nullable();
             $table->timestamps();
-            $table->index(['user_id', 'consumed_at', 'expires_at']);
+            $table->index(['user_id', 'consumed_at', 'expires_at'], 'evc_user_pending_expiry');
         });
     }
 
