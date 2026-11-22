@@ -2,38 +2,48 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use RuntimeException;
 
 class AdminUserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // 1. SUPERADMIN (Full Access)
-        \App\Models\User::updateOrCreate(
-            ['email' => 'superadmin@taskforge.app'],
+        if (! app()->environment('local')) {
+            throw new RuntimeException('Administrator bootstrap is restricted to APP_ENV=local.');
+        }
+
+        $email = env('TASKFORGE_BOOTSTRAP_ADMIN_EMAIL');
+        $password = env('TASKFORGE_BOOTSTRAP_ADMIN_PASSWORD');
+
+        if (! is_string($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)
+            || ! is_string($password) || strlen($password) < 16) {
+            throw new RuntimeException('Set a valid TASKFORGE_BOOTSTRAP_ADMIN_EMAIL and a unique TASKFORGE_BOOTSTRAP_ADMIN_PASSWORD of at least 16 characters.');
+        }
+
+        $role = Role::query()->where('slug', 'superadmin')->first();
+        if (! $role) {
+            throw new RuntimeException('Run RolePermissionSeeder before AdminUserSeeder.');
+        }
+
+        $user = User::query()->firstOrCreate(
+            ['email' => $email],
             [
-                'name'     => 'Super Admin',
-                'password' => \Illuminate\Support\Facades\Hash::make('123456789'),
-                'role'     => 'superadmin',
-            ]
+                'name' => 'Local Administrator',
+                'password' => Hash::make($password),
+                'role' => 'superadmin',
+            ],
         );
 
-        // 2. ADMIN (Limited Access)
-        \App\Models\User::updateOrCreate(
-            ['email' => 'admin@taskforge.app'],
-            [
-                'name'     => 'Admin Manager',
-                'password' => \Illuminate\Support\Facades\Hash::make('123456789'),
-                'role'     => 'admin',
-            ]
-        );
+        // The legacy users.role column remains for compatibility, but the
+        // role_user pivot is the source of authorization decisions.
+        $user->forceFill(['role' => 'superadmin'])->save();
+        $user->roles()->syncWithoutDetaching([$role->getKey()]);
 
-        $this->command->info('Accounts ready:');
-        $this->command->info('- superadmin@taskforge.app / 123456789 (Full Access)');
-        $this->command->info('- admin@taskforge.app / 123456789 (Limited Access)');
+        $this->command?->info('Local administrator configured (credentials not displayed).');
     }
 }

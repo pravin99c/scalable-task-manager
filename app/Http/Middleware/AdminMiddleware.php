@@ -4,21 +4,17 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class AdminMiddleware
 {
-    /**
-     * Handle an incoming request.
-     * Only allows users with the 'admin' role.
-     */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && in_array(Auth::user()->role, ['superadmin', 'admin'])) {
-            return $next($request);
-        }
+        // Temporary fail-closed policy: the existing admin dashboard exposes
+        // global data and is not tenant-scoped. Only an explicitly assigned
+        // superadmin may access it until per-resource admin policies exist.
+        abort_unless($request->user()?->hasRole('superadmin'), 403);
 
-        return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        return $next($request);
     }
 }

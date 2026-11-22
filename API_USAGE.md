@@ -1,52 +1,42 @@
-# TaskForge API Documentation
+# TaskForge API — current development contract
 
-This project provides a robust RESTful API for managing projects and tasks.
+This document reflects the Laravel routes in `routes/api.php` on the `development` branch. Authentication requires Laravel Sanctum bearer tokens.
 
-## 🔐 Authentication
-The API uses **Laravel Sanctum** (Bearer Tokens).
-1. **Login**: `POST /api/login` with `email` and `password`.
-2. **Response**: Receive a `token`.
-3. **Usage**: Include the header `Authorization: Bearer <your_token>` in all requests.
+## Endpoints
 
----
+| Method | URL | Purpose |
+| --- | --- | --- |
+| POST | `/api/v1/auth/register` | Register |
+| POST | `/api/v1/auth/login` | Login and issue token |
+| POST | `/api/v1/auth/logout` | Revoke active user's tokens (authenticated) |
+| GET | `/api/v1/user` | Current authenticated user |
+| GET, POST | `/api/v1/projects` | List own projects / create |
+| GET, PUT/PATCH, DELETE | `/api/v1/projects/{project}` | Authorized project operations |
+| GET, POST | `/api/v1/tasks` | List tasks in own projects / create |
+| GET, PUT/PATCH, DELETE | `/api/v1/tasks/{task}` | Authorized task operations |
+| GET, POST | `/api/v1/tasks/{task}/comments` | Authorized comment access |
 
-## 📁 Projects
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/projects` | List all projects (cached) |
-| `POST` | `/api/projects` | Create a new project |
-| `GET` | `/api/projects/{id}` | Get project details |
-| `PUT` | `/api/projects/{id}` | Update project |
-| `DELETE` | `/api/projects/{id}` | Delete project |
+All non-login/non-registration endpoints require the correct authenticated user. Project/task cross-user access is forbidden until a dedicated project-membership feature exists.
 
----
+## Authentication example
 
-## 🎯 Tasks
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/projects/{id}/tasks` | List tasks for a project |
-| `POST` | `/api/projects/{id}/tasks` | Create task (triggers Queue & Broadcast) |
-| `PUT` | `/api/tasks/{id}` | Update task status/priority |
-| `DELETE` | `/api/tasks/{id}` | Remove task |
+Replace the sample values with a **locally created, non-privileged test account**.
 
----
-
-## ⚡ Scalability Features
-- **Caching**: Project lists are cached for 60 minutes.
-- **Rate Limiting**: 60 requests per minute per user.
-- **Background Jobs**: Task assignments are processed via queues.
-- **Real-time**: Private channels (Pusher/Reverb) broadcast task updates.
-
----
-
-## 🛠️ Testing with cURL
 ```bash
-# Login
-curl -X POST http://127.0.0.1:8000/api/login \
-     -H "Content-Type: application/json" \
-     -d '{"email":"admin@taskforge.app", "password":"123456789"}'
-
-# Get Projects
-curl -X GET http://127.0.0.1:8000/api/projects \
-     -H "Authorization: Bearer YOUR_TOKEN_HERE"
+curl -X POST http://127.0.0.1:8000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"your-local-test-user@example.test","password":"YOUR_UNIQUE_LOCAL_PASSWORD"}'
 ```
+
+Use the returned `data.access_token` only in local testing; never paste access tokens into commits, public issues, screenshots, or CI logs.
+
+```bash
+curl http://127.0.0.1:8000/api/v1/projects \
+  -H 'Authorization: Bearer YOUR_LOCAL_TOKEN'
+```
+
+## Scope and maturity
+
+The current branch has Laravel 11 services, project/task CRUD, comments, and foundations for queues and broadcasting. Existing documentation may describe features not fully validated; do not assume production readiness. See [Phase 1 security validation](docs/SECURITY_VALIDATION.md) and the [GitHub Actions workflow](.github/workflows/laravel-validation.yml).
+
+Task updates trigger a broadcast event and queue logic, but outbound notifications and reliable real-time delivery remain future integration work.

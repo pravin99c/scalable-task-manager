@@ -2,39 +2,38 @@
 
 namespace App\Services;
 
+use App\Models\Project;
+use App\Models\User;
 use App\Repositories\Interfaces\ProjectRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
 
 class ProjectService extends BaseService
 {
-    protected $projectRepository;
-
-    public function __construct(ProjectRepositoryInterface $projectRepository)
+    public function __construct(private ProjectRepositoryInterface $projectRepository)
     {
-        $this->projectRepository = $projectRepository;
     }
 
-    public function getAllProjects()
+    public function getAllProjects(User $user): Collection
     {
-        return \Illuminate\Support\Facades\Cache::remember('projects.all', 3600, function () {
-            return $this->projectRepository->all();
-        });
+        // Never use a globally shared "projects.all" cache for private data.
+        return Project::query()
+            ->where('created_by', $user->getKey())
+            ->orderBy('id')
+            ->get();
     }
 
     public function createProject(array $data)
     {
-        \Illuminate\Support\Facades\Cache::forget('projects.all');
         return $this->projectRepository->create($data);
     }
 
     public function updateProject(array $data, int $id)
     {
-        \Illuminate\Support\Facades\Cache::forget('projects.all');
         return $this->projectRepository->update($data, $id);
     }
 
     public function deleteProject(int $id)
     {
-        \Illuminate\Support\Facades\Cache::forget('projects.all');
         return $this->projectRepository->delete($id);
     }
 
