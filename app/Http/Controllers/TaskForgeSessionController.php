@@ -20,8 +20,24 @@ class TaskForgeSessionController extends Controller
      */
     public function session(Request $request): JsonResponse
     {
+        // The SPA bootstrap must never treat an API bearer token as a web
+        // login. auth:sanctum may have changed the default guard earlier
+        // in a request, so explicitly resolve the browser's web guard.
+        $guard = Auth::guard('web');
+        $user = $guard->user();
+
+        // A changed email increments the account's session version. This
+        // also rejects stale sessions in non-database session drivers.
+        if ($user && (int) $request->session()->get('taskforge_session_version', -1)
+            !== (int) $user->session_version) {
+            $guard->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            $user = null;
+        }
+
         return response()->json([
-            'data' => $request->user(),
+            'data' => $user,
             'csrf_token' => $request->session()->token(),
         ])->header('Cache-Control', 'no-store');
     }
@@ -40,6 +56,7 @@ class TaskForgeSessionController extends Controller
         }
 
         $request->session()->regenerate();
+        $request->session()->put('taskforge_session_version', (int) Auth::guard('web')->user()->session_version);
 
         return $this->session($request);
     }
@@ -65,6 +82,7 @@ class TaskForgeSessionController extends Controller
 
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
+        $request->session()->put('taskforge_session_version', (int) Auth::guard('web')->user()->session_version);
 
         return $this->session($request)->setStatusCode(201);
     }
