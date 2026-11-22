@@ -1,109 +1,76 @@
-# ⚡ Scalable Task Manager
+# TaskForge · Scalable Task Manager
 
-> **A production-ready, scalable task management system built with Laravel.**
+> Laravel project and task management API with explicit access policies and a growing collaboration model.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=flat&logo=laravel&logoColor=white)](https://laravel.com)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white)](https://redis.io/)
+[![Laravel](https://img.shields.io/badge/Laravel-11-FF2D20?logo=laravel&logoColor=white)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php&logoColor=white)](https://php.net)
+[![License: MIT](https://img.shields.io/badge/License-MIT-0B7285)](LICENSE)
+![Status](https://img.shields.io/badge/Status-Work%20in%20progress-F59E0B)
 
-Scalable Task Manager is a robust, highly scalable backend API designed to handle complex task management workflows. Architected with senior-level engineering principles, it prioritizes performance, maintainability, and clean code.
+## Planned dashboard design
 
----
+![TaskForge dashboard design concept](https://raw.githubusercontent.com/pravin99c/scalable-task-manager/main/docs/images/taskforge-dashboard-concept.webp)
 
-## 🏗 Key Highlights & System Design
+**Design concept only.** This is a proposed UI, **not a screenshot from the deployed application**. The existing UI uses Blade; the React dashboard, collaborative Kanban board, charts and polished visuals are future milestones.
 
-Scalable Task Manager is engineered using enterprise-grade design patterns to ensure the codebase remains maintainable as the application scales.
+## Current foundation
 
-- **Clean Architecture:** Strictly adheres to the **Service** and **Repository** patterns, decoupling business logic from the presentation layer and abstracting data access.
-- **Asynchronous Processing:** Heavy operations (e.g., email notifications, report generation) are offloaded to **Laravel Queues** (backed by Redis) to ensure non-blocking API responses.
-- **Performance Optimization:** Implemented comprehensive database indexing and intelligent Redis caching strategies. *Benchmarking shows Redis caching improved P99 response times from **300ms** to **80ms**.*
-- **Robust Security:** Stateful REST API authentication using **Laravel Sanctum**, coupled with fine-grained Role-Based Access Control (RBAC).
-- **High Availability Ready:** Containerized via Docker, making it orchestration-ready (Kubernetes/Docker Swarm) for horizontal scaling.
+- Laravel 11, Sanctum, project and task CRUD, comments, activity logs and admin views.
+- Project policies and task policies limit access by ownership or explicit membership.
+- A project has one **owner** (`projects.created_by`). The owner can invite an existing registered user as **editor** or **viewer**.
+- **Editor** can read the project and manage tasks, but cannot rename/delete the project or manage members.
+- **Viewer** can read projects and tasks, but cannot modify them or add comments.
+- **Unrelated users** have no access to private project data or broadcast channels.
+- Task assignment is restricted to a project's owner or editors.
+- When a member is removed or downgraded to viewer, existing task assignments to that user are cleared.
+- Existing global administrator UI remains restricted to explicitly assigned superadmins.
 
----
+**The collaboration API is under review on this feature branch.** Automated tests and code review must pass before merge. Do not use this branch as a public production service.
 
-## 🛠 Tech Stack
+## Project membership endpoints
 
-| Component | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Core Framework** | Laravel (PHP) | Backend API structure and routing |
-| **Authentication** | Laravel Sanctum | Secure API token management |
-| **Caching & Queues**| Redis | High-speed data caching, queue driver, and rate limiting |
-| **Database** | MySQL / PostgreSQL | Primary relational data store |
-| **Infrastructure** | Docker | Container orchestration and isolated local development |
+All routes are under `/api/v1` and require Sanctum authentication.
 
----
+| Method | Endpoint | Who can use it |
+| --- | --- | --- |
+| `GET` | `/projects/{project}/members` | Owner, editor, viewer |
+| `POST` | `/projects/{project}/members` | Owner only |
+| `DELETE` | `/projects/{project}/members/{user}` | Owner only |
+| `GET/POST` | `/projects` | Own/membership projects or create new |
+| `GET/POST` | `/tasks` | Accessible tasks / owner-or-editor task creation |
+| `GET/PATCH/DELETE` | `/tasks/{task}` | Role-protected operations |
 
-## ✨ Core Functionalities
+An owner can add or change a member's project role by posting `{"user_id": 123, "role": "editor"}` or `"viewer"`. The target must be an **existing registered account**. Email invitations and workspaces are not implemented yet.
 
-- **Role-Based Access Control (RBAC):** Hierarchical permissions ensuring secure access to resources.
-- **Task Lifecycle Management:** Comprehensive state machine tracking for task statuses (`TODO` ➔ `IN_PROGRESS` ➔ `DONE`).
-- **Activity Audit Logging:** Immutable audit trails recording every critical action performed on tasks.
-- **Real-Time Broadcasting:** Event-driven architecture pushing real-time state changes to connected clients.
-- **API Rate Limiting:** Redis-backed rate limiters preventing abuse and ensuring fair usage across tenants.
+## Development and quality
 
----
-
-## 🚀 API Endpoints
-
-*Note: All endpoints are prefixed with `/api/v1` and require a valid Bearer Token.*
-
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :---: |
-| `POST` | `/auth/login` | Authenticate and retrieve token | ❌ |
-| `GET` | `/tasks` | List all tasks (paginated, cache enabled) | ✅ |
-| `POST` | `/tasks` | Create a new task | ✅ |
-| `GET` | `/tasks/{id}` | Retrieve specific task details | ✅ |
-| `PATCH` | `/tasks/{id}/status` | Update task status (`TODO`, `IN_PROGRESS`, `DONE`) | ✅ |
-| `GET` | `/tasks/{id}/audit` | Retrieve audit logs for a task | ✅ |
-
----
-
-## 🐳 Docker Installation Guide
-
-Follow these steps to get the application running locally using Docker. Ensure you have Docker installed and running on your system.
-
-### 1. Clone the repository
 ```bash
 git clone https://github.com/pravin99c/scalable-task-manager.git
 cd scalable-task-manager
-```
-
-### 2. Environment Setup
-Copy the example environment file and configure your local variables.
-```bash
+git switch feat/project-membership-foundation
+composer install
 cp .env.example .env
-```
-*Ensure `DB_HOST`, `REDIS_HOST`, and `QUEUE_CONNECTION` are set correctly for the Docker environment.*
-
-### 3. Spin up the Containers
-Build and start the Docker containers using Laravel Sail or raw Docker Compose.
-```bash
-docker compose up -d --build
+php artisan key:generate
+# Configure an isolated local database in .env before migrations.
+php artisan migrate
+php artisan test
 ```
 
-### 4. Install Dependencies
-Run Composer install inside the application container.
-```bash
-docker compose exec app composer install
-```
+The CI workflow validates PHP syntax, a **fresh disposable MySQL migration**, and the Laravel test suite. This does not certify a production upgrade on an existing database.
 
-### 5. Generate Application Key
-```bash
-docker compose exec app php artisan key:generate
-```
+## Roadmap
 
-### 6. Run Migrations & Seeders
-Set up your database schema and populate it with initial data.
-```bash
-docker compose exec app php artisan migrate --seed
-```
+1. Complete membership and authorization tests, validate all broadcast paths, and review existing-data migrations.
+2. Add invitation flows, role lifecycle policies, audit events, and pagination.
+3. Build the responsive React + TypeScript UI and convert approved UI concepts to real screenshots.
+4. Validate queue workers, notifications, deployment and real-world performance.
 
-Your API is now accessible and ready to accept requests!
+See [security validation guidance](docs/SECURITY_VALIDATION.md) and [API documentation](API_USAGE.md). Some prior documentation predates the project membership feature and will be reconciled in subsequent pull requests.
 
----
+## Contribute
 
-## 📄 License
+Review the implementation, propose small improvements, and add tests for authorization and abuse cases. Please **do not post credentials or exploit details in public issues**.
 
-This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## License
+
+[MIT](LICENSE).

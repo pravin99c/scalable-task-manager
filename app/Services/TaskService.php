@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Repositories\Interfaces\TaskRepositoryInterface;
@@ -15,9 +16,8 @@ class TaskService extends BaseService
 
     public function getAllTasks(User $user): Collection
     {
-        // Restrict task listings through project ownership; no shared cache.
         return Task::query()
-            ->whereHas('project', fn ($query) => $query->where('created_by', $user->getKey()))
+            ->whereHas('project', fn ($query) => $query->accessibleTo($user))
             ->orderBy('id')
             ->get();
     }

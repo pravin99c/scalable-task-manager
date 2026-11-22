@@ -22,7 +22,20 @@ class UpdateTaskRequest extends FormRequest
         return [
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'assigned_to' => ['nullable', 'integer', Rule::in([$this->user()->getKey()])],
+            'assigned_to' => [
+                'nullable', 'integer', Rule::exists('users', 'id'),
+                function ($attribute, $value, $fail) {
+                    if ($value === null) {
+                        return;
+                    }
+
+                    $project = $this->route('task')->project;
+                    if ((int) $project->created_by !== (int) $value
+                        && ! $project->members()->whereKey($value)->wherePivot('role', 'editor')->exists()) {
+                        $fail('Assignee must be the project owner or an editor.');
+                    }
+                },
+            ],
             'status' => ['sometimes', Rule::in(['TODO', 'IN_PROGRESS', 'DONE'])],
             'priority' => ['sometimes', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
             'due_date' => ['nullable', 'date'],

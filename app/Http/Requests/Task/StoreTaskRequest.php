@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Task;
 
+use App\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,19 +15,33 @@ class StoreTaskRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->user()->getKey();
-
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'project_id' => [
-                'required',
-                'integer',
-                Rule::exists('projects', 'id')->where('created_by', $userId),
+                'required', 'integer', Rule::exists('projects', 'id'),
+                function ($attribute, $value, $fail) {
+                    $project = Project::find($value);
+                    if (! $project || ! $this->user()->can('editTasks', $project)) {
+                        $fail('You do not have permission to create tasks in this project.');
+                    }
+                },
             ],
-            // Until project membership exists, prohibit assigning tasks to
-            // arbitrary accounts and exposing task details to third parties.
-            'assigned_to' => ['nullable', 'integer', Rule::in([$userId])],
+            'assigned_to' => [
+                'nullable', 'integer', Rule::exists('users', 'id'),
+                function ($attribute, $value, $fail) {
+                    if ($value === null) {
+                        return;
+                    }
+
+                    $project = Project::find($this->input('project_id'));
+                    if (! $project || ! $this->user()->can('editTasks', $project)
+                        || ((int) $project->created_by !== (int) $value
+                            && ! $project->members()->whereKey($value)->wherePivot('role', 'editor')->exists())) {
+                        $fail('Assignee must be the project owner or an editor.');
+                    }
+                },
+            ],
             'status' => ['nullable', Rule::in(['TODO', 'IN_PROGRESS', 'DONE'])],
             'priority' => ['nullable', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
             'due_date' => ['nullable', 'date'],

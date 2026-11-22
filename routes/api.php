@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\Api\V1\ProjectMemberController;
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
@@ -22,6 +23,11 @@ Route::prefix('v1')->group(function () {
         // Project and Task Management Routes
         Route::apiResource('projects', ProjectController::class);
         Route::apiResource('tasks', TaskController::class);
+
+        // Explicit membership, managed by the project owner.
+        Route::get('projects/{project}/members', [ProjectMemberController::class, 'index']);
+        Route::post('projects/{project}/members', [ProjectMemberController::class, 'store']);
+        Route::delete('projects/{project}/members/{user}', [ProjectMemberController::class, 'destroy']);
 
         // Comments
         Route::get('tasks/{task}/comments', [CommentController::class, 'index']);

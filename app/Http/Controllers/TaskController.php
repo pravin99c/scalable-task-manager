@@ -31,7 +31,7 @@ class TaskController extends Controller
 
         // FormRequest constrains project_id, but enforce the same rule at
         // the controller boundary to guard against later validation changes.
-        Gate::authorize('update', Project::findOrFail($data['project_id']));
+        Gate::authorize('editTasks', Project::findOrFail($data['project_id']));
         $data['created_by'] = $request->user()->getKey();
 
         return response()->json($this->taskService->createTask($data), 201);
