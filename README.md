@@ -1,75 +1,66 @@
 # TaskForge · Scalable Task Manager
 
-> Laravel project and task management API with explicit access policies and a growing collaboration model.
+> A Laravel project and task management API exploring secure collaboration, role-aware access, and maintainable backend architecture.
 
 [![Laravel](https://img.shields.io/badge/Laravel-11-FF2D20?logo=laravel&logoColor=white)](https://laravel.com)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php&logoColor=white)](https://php.net)
 [![License: MIT](https://img.shields.io/badge/License-MIT-0B7285)](LICENSE)
-![Status](https://img.shields.io/badge/Status-Work%20in%20progress-F59E0B)
+![Project maturity](https://img.shields.io/badge/Status-Development%20%2F%20Security%20Review-F59E0B)
 
-## Planned dashboard design
+## Dashboard preview
 
-![TaskForge dashboard design concept](https://raw.githubusercontent.com/pravin99c/scalable-task-manager/main/docs/images/taskforge-dashboard-concept.webp)
+![TaskForge proposed dark dashboard and Kanban design](docs/images/taskforge-dashboard-concept.webp)
 
-**Design concept only.** This is a proposed UI, **not a screenshot from the deployed application**. The existing UI uses Blade; the React dashboard, collaborative Kanban board, charts and polished visuals are future milestones.
+> **Design concept — not a screenshot of a working UI.** The current application includes a Blade admin interface. The dashboard and Kanban design above illustrates a planned React/TypeScript experience.
 
-## Current foundation
+## What is implemented
 
-- Laravel 11, Sanctum, project and task CRUD, comments, activity logs and admin views.
-- Project policies and task policies limit access by ownership or explicit membership.
-- A project has one **owner** (`projects.created_by`). The owner can invite an existing registered user as **editor** or **viewer**.
-- **Editor** can read the project and manage tasks, but cannot rename/delete the project or manage members.
-- **Viewer** can read projects and tasks, but cannot modify them or add comments.
-- **Unrelated users** have no access to private project data or broadcast channels.
-- Task assignment is restricted to a project's owner or editors.
-- When a member is removed or downgraded to viewer, existing task assignments to that user are cleared.
-- Existing global administrator UI remains restricted to explicitly assigned superadmins.
+The codebase contains a Laravel 11 API, Laravel Sanctum authentication, project/task CRUD, comments, activity logging, PHP unit and feature tests, and Docker development configuration. The project-membership foundation defines **owner**, **editor**, and **viewer** access levels.
 
-**The collaboration API is under review on this feature branch.** Automated tests and code review must pass before merge. Do not use this branch as a public production service.
+| Role | Read projects and tasks | Create / edit tasks | Manage members | Delete project |
+| --- | --- | --- | --- | --- |
+| Owner | Yes | Yes | Yes | Yes |
+| Editor | Yes | Yes | No | No |
+| Viewer | Yes | No | No | No |
+| Non-member | No | No | No | No |
 
-## Project membership endpoints
+Project membership uses explicitly authorized existing users. **Invitation emails, full workspace tenancy, polished React UI, and production deployment are not complete.** The legacy global administrator UI remains restricted to explicitly assigned superadmins.
 
-All routes are under `/api/v1` and require Sanctum authentication.
-
-| Method | Endpoint | Who can use it |
-| --- | --- | --- |
-| `GET` | `/projects/{project}/members` | Owner, editor, viewer |
-| `POST` | `/projects/{project}/members` | Owner only |
-| `DELETE` | `/projects/{project}/members/{user}` | Owner only |
-| `GET/POST` | `/projects` | Own/membership projects or create new |
-| `GET/POST` | `/tasks` | Accessible tasks / owner-or-editor task creation |
-| `GET/PATCH/DELETE` | `/tasks/{task}` | Role-protected operations |
-
-An owner can add or change a member's project role by posting `{"user_id": 123, "role": "editor"}` or `"viewer"`. The target must be an **existing registered account**. Email invitations and workspaces are not implemented yet.
-
-## Development and quality
+## Development quick start
 
 ```bash
 git clone https://github.com/pravin99c/scalable-task-manager.git
 cd scalable-task-manager
-git switch feat/project-membership-foundation
 composer install
 cp .env.example .env
 php artisan key:generate
-# Configure an isolated local database in .env before migrations.
+# Configure an isolated local database in .env first.
 php artisan migrate
 php artisan test
 ```
 
-The CI workflow validates PHP syntax, a **fresh disposable MySQL migration**, and the Laravel test suite. This does not certify a production upgrade on an existing database.
+For an environment that needs Docker, inspect the existing Compose files and follow the [security validation guide](docs/SECURITY_VALIDATION.md) before exposing any services. Avoid running destructive migration commands against real data.
 
-## Roadmap
+## API overview
 
-1. Complete membership and authorization tests, validate all broadcast paths, and review existing-data migrations.
-2. Add invitation flows, role lifecycle policies, audit events, and pagination.
-3. Build the responsive React + TypeScript UI and convert approved UI concepts to real screenshots.
-4. Validate queue workers, notifications, deployment and real-world performance.
+Authenticated endpoints include `/api/v1/projects`, `/api/v1/tasks`, `/api/v1/tasks/{task}/comments`, and `/api/v1/projects/{project}/members`. Owners may grant an existing user **editor** or **viewer** membership; every action is checked server-side.
 
-See [security validation guidance](docs/SECURITY_VALIDATION.md) and [API documentation](API_USAGE.md). Some prior documentation predates the project membership feature and will be reconciled in subsequent pull requests.
+See [API_USAGE.md](API_USAGE.md) for current route examples and [docs/ROADMAP.md](docs/ROADMAP.md) for future work.
 
-## Contribute
+## Engineering and quality
 
-Review the implementation, propose small improvements, and add tests for authorization and abuse cases. Please **do not post credentials or exploit details in public issues**.
+- **Security:** resource policies, project-scoped list queries, role-checked operations and authorization for private project channels.
+- **Data:** Eloquent models and migrations, MySQL support and an explicit project membership pivot.
+- **Automation:** GitHub Actions checks PHP syntax, a fresh disposable MySQL migration and the Laravel test suite.
+- **Work in progress:** strengthen membership regression tests, finish authorization review, verify upgrades against existing database backups, and integrate secure real-time delivery.
+
+**Release status:** This repository is a demonstration and active development project, **not a production-certified service**. CI success is necessary but does not replace independent security testing or deployment validation. No unverified throughput or latency claims are made.
+
+## Contribute and follow progress
+
+Review [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. Report credentials or security issues privately rather than opening a public exploit report. Documentation, accessibility, reproducible bug reports, and security-focused tests are especially useful.
+
+If the architecture or project is helpful to you, consider starring the repository to follow its progress.
 
 ## License
 

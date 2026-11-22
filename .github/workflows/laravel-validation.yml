@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - development
+      - main
       - 'fix/**'
   pull_request:
     branches:
       - development
+      - main
 
 jobs:
   syntax-and-tests:
