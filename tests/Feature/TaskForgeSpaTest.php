@@ -63,6 +63,26 @@ class TaskForgeSpaTest extends TestCase
         Queue::assertPushed(DeliverTaskForgeMail::class);
     }
 
+
+    public function test_changing_email_logs_out_the_current_browser_session(): void
+    {
+        Queue::fake([DeliverTaskForgeMail::class]);
+        $user = User::factory()->create(['email' => 'old-browser@example.test']);
+
+        $this->postJson('/app/api/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertOk();
+
+        $this->patchJson('/api/v2/auth/email', [
+            'email' => 'new-browser@example.test',
+            'current_password' => 'password',
+        ])->assertOk();
+
+        $this->getJson('/app/api/session')->assertOk()->assertJsonPath('data', null);
+        $this->assertNull($user->fresh()->email_verified_at);
+    }
+
     public function test_failed_login_does_not_authenticate_a_user(): void
     {
         User::factory()->create(['email' => 'login@example.test']);
