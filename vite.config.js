@@ -14,9 +14,4 @@ export default defineConfig({
         }),
         react(),
     ],
-    test: {
-        environment: 'jsdom',
-        setupFiles: ['./resources/js/taskforge/test/setup.ts'],
-        include: ['resources/js/taskforge/**/*.test.ts', 'resources/js/taskforge/**/*.test.tsx'],
-    },
 });
