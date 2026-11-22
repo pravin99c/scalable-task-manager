@@ -39,20 +39,20 @@ php artisan migrate
 php artisan test
 ```
 
-For an environment that needs Docker, inspect the existing Compose files and follow the [security validation guide](docs/SECURITY_VALIDATION.md) before exposing any services. Avoid running destructive migration commands against real data.
+For a local Docker setup, follow the [TaskForge local development guide](docs/LOCAL_DEVELOPMENT.md) for the canonical Compose file, required non-default passwords, and repeatable commands. See also the [security validation guide](docs/SECURITY_VALIDATION.md). Avoid running destructive migration commands against real data.
 
 ## API overview
 
 Authenticated endpoints include `/api/v1/projects`, `/api/v1/tasks`, `/api/v1/tasks/{task}/comments`, and `/api/v1/projects/{project}/members`. Owners may grant an existing user **editor** or **viewer** membership; every action is checked server-side.
 
-See [API_USAGE.md](API_USAGE.md) for current route examples, [docs/ROADMAP.md](docs/ROADMAP.md) for future work, and [repository governance](docs/REPOSITORY_GOVERNANCE.md) for branch and pull-request rules.
+See [API_USAGE.md](API_USAGE.md) for current route examples, [API v2 design and invitation security](docs/API_V2.md) for the proposed upgrade, [docs/ROADMAP.md](docs/ROADMAP.md) for future work, and [repository governance](docs/REPOSITORY_GOVERNANCE.md) for the branch and review policy.
 
 ## Engineering and quality
 
 - **Security:** resource policies, project-scoped list queries, role-checked operations and authorization for private project channels.
 - **Data:** Eloquent models and migrations, MySQL support and an explicit project membership pivot.
 - **Automation:** GitHub Actions checks PHP syntax, a fresh disposable MySQL migration and the Laravel test suite.
-- **Work in progress:** strengthen membership regression tests, finish authorization review, verify upgrades against existing database backups, and integrate secure real-time delivery.
+- **Work in progress:** email verification and invitation-delivery hardening under review, full mail and worker/scheduler operations, verifying upgrades against existing database backups, and secure real-time delivery.
 
 **Release status:** This repository is a demonstration and active development project, **not a production-certified service**. CI success is necessary but does not replace independent security testing or deployment validation. No unverified throughput or latency claims are made.
 

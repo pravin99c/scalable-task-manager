@@ -1,6 +1,6 @@
 # TaskForge API — current development contract
 
-This document reflects the Laravel routes in `routes/api.php` on the `development` branch. Authentication requires Laravel Sanctum bearer tokens.
+This document reflects the Laravel routes in `routes/api.php` on the Phase 1 feature branch. Authentication requires Laravel Sanctum bearer tokens. Changes are proposed for review and are not yet merged into `development`.
 
 ## Endpoints
 
@@ -8,15 +8,18 @@ This document reflects the Laravel routes in `routes/api.php` on the `developmen
 | --- | --- | --- |
 | POST | `/api/v1/auth/register` | Register |
 | POST | `/api/v1/auth/login` | Login and issue token |
-| POST | `/api/v1/auth/logout` | Revoke active user's tokens (authenticated) |
+| POST | `/api/v1/auth/logout` | Revoke the presented personal access token only (authenticated) |
 | GET | `/api/v1/user` | Current authenticated user |
 | GET, POST | `/api/v1/projects` | List own projects / create |
 | GET, PUT/PATCH, DELETE | `/api/v1/projects/{project}` | Authorized project operations |
 | GET, POST | `/api/v1/tasks` | List tasks in own projects / create |
 | GET, PUT/PATCH, DELETE | `/api/v1/tasks/{task}` | Authorized task operations |
 | GET, POST | `/api/v1/tasks/{task}/comments` | Authorized comment access |
+| GET | `/api/v1/projects/{project}/members` | List authorized project membership |
+| POST | `/api/v1/projects/{project}/members` | Owner adds/updates an existing registered member (editor/viewer) |
+| DELETE | `/api/v1/projects/{project}/members/{user}` | Owner removes a project member |
 
-All non-login/non-registration endpoints require the correct authenticated user. Project/task cross-user access is forbidden until a dedicated project-membership feature exists.
+All non-login/non-registration endpoints require the correct authenticated user. Project owners can add existing users as editors or viewers; other projects remain private. Registration requires a password of at least 12 characters. Authentication endpoints are rate-limited to six requests per minute per client IP. Logout only revokes the presented personal access token; other devices remain logged in.
 
 ## Authentication example
 
@@ -37,6 +40,11 @@ curl http://127.0.0.1:8000/api/v1/projects \
 
 ## Scope and maturity
 
-The current branch has Laravel 11 services, project/task CRUD, comments, and foundations for queues and broadcasting. Existing documentation may describe features not fully validated; do not assume production readiness. See [Phase 1 security validation](docs/SECURITY_VALIDATION.md) and the [GitHub Actions workflow](.github/workflows/laravel-validation.yml).
+The current branch has Laravel 11 services, project/task CRUD, comments, and foundations for queues and broadcasting. Existing documentation may describe features not fully validated; do not assume production readiness. See [local development setup](docs/LOCAL_DEVELOPMENT.md), [Phase 1 security validation](docs/SECURITY_VALIDATION.md), and the [GitHub Actions workflow](.github/workflows/laravel-validation.yml).
 
 Task updates trigger a broadcast event and queue logic, but outbound notifications and reliable real-time delivery remain future integration work.
+
+
+## Phase 2 (version 2)
+
+See [API v2 pagination and invitation guide](docs/API_V2.md). Existing v1 routes and return shapes remain unchanged.
