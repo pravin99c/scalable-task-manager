@@ -101,6 +101,7 @@ jobs:
       - name: Start complete Sail Laravel application (integration smoke)
         run: |
           docker compose -f compose.yaml up -d --build --wait --wait-timeout 240 laravel.test
+          docker compose -f compose.yaml exec -T laravel.test php artisan migrate --force
           docker compose -f compose.yaml exec -T laravel.test php artisan migrate:status
           for attempt in $(seq 1 35); do
             code="$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/ || true)"
