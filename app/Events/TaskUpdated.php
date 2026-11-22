@@ -3,37 +3,17 @@
 namespace App\Events;
 
 use App\Models\Task;
-use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class TaskUpdated implements ShouldBroadcast
+/**
+ * Retained for legacy in-process consumers and PHPUnit tests. The previous
+ * ShouldBroadcast event serialized an entire Task record to WebSockets.
+ * The public realtime contract is now ProjectActivityChanged (ID-only).
+ */
+class TaskUpdated
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable, SerializesModels;
 
-    public $task;
-
-    /**
-     * Create a new event instance.
-     */
-    public function __construct(Task $task)
-    {
-        $this->task = $task;
-    }
-
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
-     */
-    public function broadcastOn(): array
-    {
-        return [
-            new PrivateChannel('project.' . $this->task->project_id),
-        ];
-    }
+    public function __construct(public Task $task) {}
 }

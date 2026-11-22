@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from 're
 import { Activity, ArrowRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, FolderKanban, FolderPlus, GripVertical, Inbox, Layers3, LayoutDashboard, ListTodo, LoaderCircle, LogOut, Mail, Menu, MoreHorizontal, Plus, RefreshCcw, Search, Settings2, ShieldCheck, Sparkles, Trash2, Users, X } from 'lucide-react';
 import { ApiError, api, clearCsrf, firstError, session } from './api';
 import { AuthScreen } from './AuthScreen';
+import { CollaborationPanel } from './CollaborationPanel';
+import { useProjectRealtime } from './useProjectRealtime';
 import { useDialogAccessibility } from './useDialogAccessibility';
 import { TaskForm, type TaskDraft } from './TaskForm';
 import type { Invitation, MemberList, PageMeta, Priority, Project, SessionResponse, Task, TaskStatus, User } from './types';
 
-type View = 'board' | 'team' | 'account';
+type View = 'board' | 'team' | 'account' | 'activity';
 const columns: { id: TaskStatus; name: string; subtitle: string }[] = [
     { id: 'TODO', name: 'To do', subtitle: 'Ready to start' },
     { id: 'IN_PROGRESS', name: 'In progress', subtitle: 'Moving forward' },
@@ -26,6 +28,7 @@ export function App() {
     const [starting,setStarting] = useState(true);
     const [fatal,setFatal] = useState('');
     const [view,setView] = useState<View>('board');
+    const [unreadCount,setUnreadCount] = useState(0);
     const [mobile,setMobile] = useState(false);
     const [projects,setProjects] = useState<Project[]>([]);
     const [projectMeta,setProjectMeta] = useState<PageMeta|null>(null);
@@ -58,6 +61,7 @@ export function App() {
     const [dropping,setDropping] = useState<TaskStatus|null>(null);
 
     const refresh = () => setReload(v=>v+1);
+    const liveStatus = useProjectRealtime(user ? projectId : null, refresh);
     useEffect(()=>{
         let alive=true;
         session().then(r=>{if(alive)setUser(r.data)}).catch(e=>{if(alive)setFatal(firstError(e))}).finally(()=>{if(alive)setStarting(false)});
@@ -110,6 +114,14 @@ export function App() {
         void loadTasks();void loadTeam();
         return ()=>{alive=false};
     },[user?.id,projectId,reload]);
+
+    useEffect(() => {
+        if (!user) { setUnreadCount(0); return; }
+        let active = true;
+        api.notifications().then(result => { if (active) setUnreadCount(result.unread_count); })
+            .catch(() => {});
+        return () => { active = false; };
+    }, [user?.id, reload]);
 
     const selected=projects.find(p=>p.id===projectId)??null;
     const isOwner=!!selected && selected.created_by===user?.id;
@@ -213,6 +225,7 @@ export function App() {
             <nav className="sidebar-nav" aria-label="Workspace navigation"><span className="nav-heading">WORKSPACE</span>
                 <button className={'nav-item '+(view==='board'?'active':'')} onClick={()=>{setView('board');setMobile(false)}}><LayoutDashboard size={18}/> Overview & board</button>
                 <button className={'nav-item '+(view==='team'?'active':'')} onClick={()=>{setView('team');setMobile(false)}}><Users size={18}/> Team & invitations</button>
+                <button className={'nav-item '+(view==='activity'?'active':'')} onClick={()=>{setView('activity');setMobile(false)}}><Activity size={18}/> Activity & alerts {unreadCount > 0 && <span className="count-badge">{unreadCount}</span>}</button>
                 <button className={'nav-item '+(view==='account'?'active':'')} onClick={()=>{setView('account');setMobile(false)}}><Settings2 size={18}/> Account & security</button>
                 <div className="sidebar-divider"/><div className="sidebar-row"><span className="nav-heading">YOUR PROJECTS</span><button className="mini-icon-button" onClick={()=>openProject('new')} aria-label="Add project"><Plus size={17}/></button></div>
                 <div className="sidebar-search"><Search size={15}/><input aria-label="Search projects" placeholder="Search projects…" value={projectSearch} onChange={e=>setProjectSearch(e.target.value)}/></div>
@@ -227,7 +240,7 @@ export function App() {
         </aside>
         {mobile&&<button className="mobile-overlay" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
         <main className="main-content">
-            <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-only" aria-label="Open navigation" onClick={()=>setMobile(true)}><Menu size={21}/></button><span>Workspace</span><ChevronRight size={15}/><strong>{view==='board'?selected?.name??'Overview':view==='team'?'Team & invitations':'Account & security'}</strong></div><div className="topbar-right"><span className="system-label"><span className="online-dot"/> Connected</span><button className="icon-button" aria-label="Refresh workspace" onClick={refresh}><RefreshCcw size={17}/></button><button className="topbar-avatar" aria-label="Account settings" onClick={()=>setView('account')}><Avatar name={user.name}/></button></div></header>
+            <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-only" aria-label="Open navigation" onClick={()=>setMobile(true)}><Menu size={21}/></button><span>Workspace</span><ChevronRight size={15}/><strong>{view==='board'?selected?.name??'Overview':view==='team'?'Team & invitations':view==='activity'?'Activity & alerts':'Account & security'}</strong></div><div className="topbar-right"><span className="system-label"><span className="online-dot"/> {liveStatus === 'connected' ? 'Live updates' : 'Auto refresh'}</span><button className="icon-button" aria-label="Refresh workspace" onClick={refresh}><RefreshCcw size={17}/></button><button className="topbar-avatar" aria-label="Account settings" onClick={()=>setView('account')}><Avatar name={user.name}/></button></div></header>
             <div className="page-content">
                 {error&&<div className="alert alert-error notification" role="alert"><CircleAlert size={17}/><span>{error}</span><button aria-label="Dismiss error" onClick={()=>setError('')}><X size={16}/></button></div>}
                 {notice&&<div className="alert alert-success notification" role="status"><CheckCircle2 size={17}/><span>{notice}</span><button aria-label="Dismiss notice" onClick={()=>setNotice('')}><X size={16}/></button></div>}
@@ -262,6 +275,7 @@ export function App() {
                     <div className="panel panel-pad accept-panel"><h3>Have an invitation token?</h3><p>Paste the token from your invitation email.</p><form className="inline-form" onSubmit={acceptInvitation}><input aria-label="Invitation token" value={inviteToken} onChange={e=>setInviteToken(e.target.value)} required minLength={40} placeholder="Paste invitation token"/><button className="button button-primary" disabled={busy||!user.email_verified_at} type="submit">Accept invitation <ArrowRight size={16}/></button></form>{!user.email_verified_at&&<p className="warning-text">Verify your email to accept an invitation.</p>}</div>
                     </>}
                 </>}
+                {view==='activity'&&<CollaborationPanel projectId={projectId} onSelectProject={(id)=>{ setProjectId(id);setView('board'); }} onUnread={setUnreadCount} refreshKey={reload}/>}
                 {view==='account'&&<><div className="page-hero"><div><span className="eyebrow"><span className="eyebrow-dot"/> PERSONAL SETTINGS</span><h1>Account & security</h1><p>Keep your account and team access secure.</p></div></div><div className="account-grid"><div className="panel panel-pad"><div className="account-identity"><Avatar name={user.name}/><div><h3>{user.name}</h3><p>{user.email}</p></div></div><div className={'verify-status '+(user.email_verified_at?'verified':'unverified')}>{user.email_verified_at?<><CheckCircle2 size={17}/> Email verified</>:<><CircleAlert size={17}/> Email not verified</>}</div>{!user.email_verified_at&&<><p className="panel-description">Verify your mailbox to send or accept project invitations.</p><button className="button button-secondary" disabled={busy} onClick={()=>void action(async()=>{await api.resendVerification();setNotice('Verification message queued. Check your email.')})}><Mail size={16}/> Send verification email</button><form className="stack-form top-gap" onSubmit={verifyEmail}><label>Verification token<input value={verifyToken} required minLength={40} onChange={e=>setVerifyToken(e.target.value)} placeholder="Paste your verification token"/></label><button className="button button-primary" type="submit" disabled={busy}>Verify email <ArrowRight size={16}/></button></form></>}</div><div className="panel panel-pad"><div className="side-panel-head"><span className="stat-icon orange"><ShieldCheck size={18}/></span><h3>Change email</h3></div><p className="panel-description">This signs out every device and removes team memberships linked to your old email.</p><form className="stack-form" onSubmit={updateEmail}><label>New email<input type="email" required value={changeEmail} onChange={e=>setChangeEmail(e.target.value)} placeholder="new@example.com"/></label><label>Current password<input type="password" required autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="button button-secondary" type="submit" disabled={busy}>Update email</button></form></div></div></>}
                 <footer className="dashboard-footer"><span>© TaskForge</span><span><ShieldCheck size={14}/> Secure, team-first work</span></footer>
             </div>
