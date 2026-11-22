@@ -36,8 +36,7 @@ class StoreTaskRequest extends FormRequest
 
                     $project = Project::find($this->input('project_id'));
                     if (! $project || ! $this->user()->can('editTasks', $project)
-                        || ((int) $project->created_by !== (int) $value
-                            && ! $project->members()->whereKey($value)->wherePivot('role', 'editor')->exists())) {
+                        || ! $project->canAssignTo((int) $value)) {
                         $fail('Assignee must be the project owner or an editor.');
                     }
                 },
