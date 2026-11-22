@@ -67,7 +67,9 @@ Route::prefix('app/api')->middleware('throttle:60,1')->group(function () {
     Route::post('logout', [\App\Http\Controllers\TaskForgeSessionController::class, 'logout'])->middleware('auth');
 });
 
-Route::get('/app', fn () => view('taskforge'))->name('taskforge.app');
-Route::get('/app/{path}', fn () => view('taskforge'))
-    ->where('path', '^(?!api(?:/|$)).*')
-    ->name('taskforge.fallback');
+Route::middleware(\App\Http\Middleware\SecureWorkspaceResponse::class)->group(function () {
+    Route::get('/app', fn () => view('taskforge'))->name('taskforge.app');
+    Route::get('/app/{path}', fn () => view('taskforge'))
+        ->where('path', '^(?!api(?:/|$)).*')
+        ->name('taskforge.fallback');
+});
