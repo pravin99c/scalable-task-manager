@@ -45,7 +45,7 @@ For an environment that needs Docker, inspect the existing Compose files and fol
 
 Authenticated endpoints include `/api/v1/projects`, `/api/v1/tasks`, `/api/v1/tasks/{task}/comments`, and `/api/v1/projects/{project}/members`. Owners may grant an existing user **editor** or **viewer** membership; every action is checked server-side.
 
-See [API_USAGE.md](API_USAGE.md) for current route examples and [docs/ROADMAP.md](docs/ROADMAP.md) for future work.
+See [API_USAGE.md](API_USAGE.md) for current route examples, [docs/ROADMAP.md](docs/ROADMAP.md) for future work, and [repository governance](docs/REPOSITORY_GOVERNANCE.md) for branch and pull-request rules.
 
 ## Engineering and quality
 
