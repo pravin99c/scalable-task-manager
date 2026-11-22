@@ -55,8 +55,17 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
+      # Once a reviewed package-lock.json is checked in, npm ci uses its
+      # exact dependency graph. Until then retain the existing npm install
+      # behavior; remove this fallback after lockfile adoption.
       - name: Install frontend dependencies
-        run: npm install --no-audit --no-fund
+        run: |
+          if test -f package-lock.json; then
+            npm ci --no-audit --no-fund
+          else
+            echo "::warning::package-lock.json missing; npm install is not reproducible"
+            npm install --no-audit --no-fund
+          fi
       - name: TypeScript type checking
         run: npm run typecheck
       - name: React component and API tests
