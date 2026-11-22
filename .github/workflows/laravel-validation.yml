@@ -3,13 +3,18 @@ name: Laravel security validation
 on:
   push:
     branches:
-      - development
       - main
+      - development
       - 'fix/**'
+      - 'feat/**'
+      - 'chore/**'
   pull_request:
     branches:
       - development
       - main
+
+permissions:
+  contents: read
 
 jobs:
   syntax-and-tests:
@@ -26,6 +31,14 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot_test_only"
           --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      # CI-only disposable credentials for Docker Compose smoke tests.
+      DB_ROOT_PASSWORD: only-for-disposable-ci-root
+      DB_PASSWORD: only-for-disposable-ci-app
+      DB_USERNAME: taskforge
+      DB_DATABASE: taskforge_ci_compose
+      FORWARD_DB_PORT: '33061'
+      FORWARD_REDIS_PORT: '63791'
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -42,6 +55,16 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+      - name: Validate canonical and legacy Compose entrypoints
+        run: |
+          test -f vendor/laravel/sail/runtimes/8.4/Dockerfile
+          docker compose -f compose.yaml config --quiet
+          docker compose -f docker-compose.yml config --quiet
+      - name: Smoke test local MySQL and Redis containers
+        run: |
+          docker compose -f compose.yaml up -d --wait --wait-timeout 180 mysql redis
+          test "$(docker compose -f compose.yaml exec -T redis redis-cli ping)" = "PONG"
+          docker compose -f compose.yaml exec -T mysql sh -c 'mysql -h 127.0.0.1 -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" -N -B -e "SELECT 1"' | grep -qx 1
       - name: Verify fresh MySQL migration
         env:
           APP_ENV: testing
@@ -54,3 +77,6 @@ jobs:
         run: php artisan migrate:fresh --force
       - name: Feature and unit tests (isolated SQLite)
         run: php artisan test --stop-on-failure
+      - name: Stop disposable Compose services
+        if: always()
+        run: docker compose -f compose.yaml down --volumes --remove-orphans
