@@ -83,6 +83,21 @@ jobs:
           QUEUE_CONNECTION: sync
           SESSION_DRIVER: array
         run: php artisan test --stop-on-failure
+      - name: Set up isolated Sail application database credentials
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+
+          path = Path('.env')
+          values = {key: os.environ[key] for key in ('DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_ROOT_PASSWORD')}
+          lines = path.read_text().splitlines()
+          updated = []
+          for line in lines:
+              key = line.split('=', 1)[0]
+              updated.append(key + '=' + values[key] if key in values else line)
+          path.write_text(chr(10).join(updated) + chr(10))
+          PY
       - name: Start complete Sail Laravel application (integration smoke)
         run: |
           docker compose -f compose.yaml up -d --build --wait --wait-timeout 240 laravel.test
