@@ -9,6 +9,9 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Crypt;
+use App\Jobs\DeliverTaskForgeMail;
 use Tests\TestCase;
 
 class ProjectInvitationTest extends TestCase
@@ -19,6 +22,7 @@ class ProjectInvitationTest extends TestCase
     {
         parent::setUp();
         Mail::fake();
+        Queue::fake([DeliverTaskForgeMail::class]);
     }
 
     private function as(User $user): static
@@ -35,16 +39,21 @@ class ProjectInvitationTest extends TestCase
             'role' => $role,
         ])->assertCreated()->assertJsonMissing(['token_hash' => 'anything']);
 
-        $token = '';
-        Mail::assertSent(ProjectInvitationMail::class, function (ProjectInvitationMail $mail) use (&$token, $email) {
-            if ($mail->hasTo($email)) {
-                $token = $mail->token;
+        $latest = ProjectInvitation::query()->where('project_id', $project->id)
+            ->where('email', strtolower($email))->orderByDesc('id')->firstOrFail();
+        $queued = null;
+        Queue::assertPushed(DeliverTaskForgeMail::class, function (DeliverTaskForgeMail $job) use ($latest, &$queued) {
+            if ($job->kind === 'invitation' && $job->recordId === $latest->id) {
+                $queued = $job;
                 return true;
             }
             return false;
         });
-
-        $this->assertNotSame('', $token);
+        $this->assertNotNull($queued);
+        $token = Crypt::decryptString($queued->encryptedToken);
+        $queued->handle();
+        Mail::assertSent(ProjectInvitationMail::class, fn (ProjectInvitationMail $mail) =>
+            $mail->hasTo($email) && $mail->token === $token);
         $this->assertDatabaseHas('project_invitations', [
             'project_id' => $project->id,
             'email' => strtolower($email),
