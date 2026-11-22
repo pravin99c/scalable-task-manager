@@ -146,13 +146,21 @@ class ProjectInvitationController extends Controller
         abort_if($request->user()->email_verified_at === null, 403, 'Verify your email before accepting an invitation.');
 
         $result = DB::transaction(function () use ($request, $data) {
+            // Serialize acceptance against account-email changes. Recheck the
+            // persisted verified identity while holding the same user lock
+            // used by EmailChangeService.
+            $invitee = \App\Models\User::query()->lockForUpdate()
+                ->findOrFail($request->user()->getKey());
+            if ($invitee->email_verified_at === null) {
+                abort(403, 'Verify your email before accepting an invitation.');
+            }
             $invitation = ProjectInvitation::query()
                 ->where('token_hash', hash('sha256', $data['token']))
                 ->lockForUpdate()
                 ->first();
 
             if (! $invitation || ! $invitation->isPending()
-                || Str::lower($request->user()->email) !== $invitation->email) {
+                || Str::lower($invitee->email) !== $invitation->email) {
                 throw ValidationException::withMessages(['token' => ['Invitation is invalid, expired, or not assigned to this account.']]);
             }
 
@@ -163,11 +171,11 @@ class ProjectInvitationController extends Controller
 
             // If the invitee is already a member, do not use a token to
             // change a role set separately by the owner.
-            if ($project->hasMember($request->user())) {
+            if ($project->hasMember($invitee)) {
                 throw ValidationException::withMessages(['token' => ['You are already a member of this project.']]);
             }
 
-            $project->members()->attach($request->user()->getKey(), [
+            $project->members()->attach($invitee->getKey(), [
                 'role' => $invitation->role,
             ]);
             $invitation->forceFill(['accepted_at' => now()])->save();
