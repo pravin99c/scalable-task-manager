@@ -21,6 +21,33 @@ permissions:
   contents: read
 
 jobs:
+  # Applies only to release/* PRs; normal feature PRs retain existing
+  # warning-only advisory reports. A release candidate is blocked if either
+  # advisory registry fails or reports a vulnerability at configured severity.
+  release-candidate-security:
+    name: Release candidate locked dependency audit
+    if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Validate locked dependency metadata
+        run: |
+          python3 scripts/validate_npm_lockfile.py
+          python3 scripts/release_quality_gate.py --strict
+      - name: Fail closed on locked dependency advisories or registry failures
+        run: python3 scripts/release_security_gate.py --timeout 180
+
   syntax-and-tests:
     name: PHP lint and Laravel tests
     runs-on: ubuntu-latest
@@ -55,30 +82,42 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      # Once a reviewed package-lock.json is checked in, npm ci uses its
-      # exact dependency graph. Until then retain the existing npm install
-      # behavior; remove this fallback after lockfile adoption.
-      - name: Install frontend dependencies
+      - name: Require verified npm lockfile and deterministic installation
         run: |
-          if test -f package-lock.json; then
-            npm ci --no-audit --no-fund
-          else
-            echo "::warning::package-lock.json missing; npm install is not reproducible"
-            npm install --no-audit --no-fund
-          fi
+          test -s package-lock.json || { echo "::error::package-lock.json missing; deterministic build required"; exit 1; }
+          python3 scripts/validate_npm_lockfile.py
+          npm ci --no-audit --no-fund
       - name: TypeScript type checking
         run: npm run typecheck
       - name: React component and API tests
         run: npm test
       - name: Frontend production build
         run: npm run build
+      # Findings must be reviewed by maintainers; advisory service outages
+      # should not weaken the existing mandatory Laravel/browser test gates.
+      - name: Composer dependency advisory report
+        shell: bash
+        run: |
+          if composer audit --locked --no-interaction; then
+            echo 'Composer advisory check completed without reported findings.'
+          else
+            echo '::warning::Composer advisory findings or registry failure: review before release.'
+          fi
+      - name: npm high-severity advisory report
+        shell: bash
+        run: |
+          if npm audit --package-lock-only --audit-level=high; then
+            echo 'npm audit completed without high-severity findings.'
+          else
+            echo '::warning::npm audit findings or registry failure: review before release.'
+          fi
       - name: PHP syntax checks
         run: |
           find app database routes tests bootstrap -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Synthetic Python release and benchmark safety tests
         run: python3 -m unittest discover -s tests/ci -p 'test_*.py' -v
-      - name: Release artifact report (non-blocking during migration)
-        run: python3 scripts/release_quality_gate.py
+      - name: Required release artifact gate
+        run: python3 scripts/release_quality_gate.py --strict
       - name: Prepare application
         run: |
           cp .env.example .env
